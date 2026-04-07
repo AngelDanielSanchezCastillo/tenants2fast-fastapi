@@ -1,0 +1,52 @@
+{
+  "roles": [
+    {
+      "name": "Owner",
+      "description": "Full control over the tenant resources and users"
+    },
+    {
+      "name": "Admin",
+      "description": "Administrative access to most tenant resources"
+    },
+    {
+      "name": "Member",
+      "description": "Standard access to tenant resources"
+    }
+  ],
+  "categories": [
+    {
+      "name": "System",
+      "permissions": [
+        {
+          "name": "view_tenant_info",
+          "description": "View tenant metadata"
+        },
+        {
+          "name": "edit_tenant_info",
+          "description": "Modify tenant metadata"
+        }
+      ]
+    },
+    {
+      "name": "Users",
+      "permissions": [
+        {
+          "name": "list_users",
+          "description": "List all users in the tenant"
+        },
+        {
+          "name": "add_users",
+          "description": "Add new users to the tenant"
+        },
+        {
+          "name": "remove_users",
+          "description": "Remove users from the tenant"
+        },
+        {
+          "name": "manage_roles",
+          "description": "Assign or remove roles from users"
+        }
+      ]
+    }
+  ]
+}

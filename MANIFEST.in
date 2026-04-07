@@ -1,0 +1,8 @@
+include README.md
+include LICENSE
+recursive-include docs *.md *.example
+recursive-include examples *.py
+recursive-include src/tenant2fast_fastapi *.py *.html
+global-exclude __pycache__
+global-exclude *.py[co]
+global-exclude .DS_Store

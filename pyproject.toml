@@ -1,0 +1,78 @@
+[build-system]
+requires = ["setuptools>=61.0", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "tenants2fast-fastapi"
+version = "0.1.0"
+description = "Multi-tenancy management module for FastAPI with tenant isolation and permission-aware middleware"
+readme = "README.md"
+requires-python = ">=3.10"
+license = {file = "LICENSE"}
+authors = [
+    {name = "Angel Daniel Sanchez Castillo", email = "angeldaniel.sanchezcastillo@gmail.com"}
+]
+keywords = ["fastapi", "multitenancy", "tenants", "sqlmodel", "middleware", "rbac"]
+classifiers = [
+    "Development Status :: 3 - Alpha",
+    "Intended Audience :: Developers",
+    "License :: OSI Approved :: MIT License",
+    "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3.10",
+    "Programming Language :: Python :: 3.11",
+    "Programming Language :: Python :: 3.12",
+    "Programming Language :: Python :: 3.13",
+    "Framework :: FastAPI",
+    "Topic :: Software Development :: Libraries :: Python Modules",
+]
+
+dependencies = [
+    # Pulls in pgsqlasync2fast-fastapi, mailing2fast-fastapi,
+    # log2fast-fastapi, sqlmodel, fastapi, pydantic, etc. transitively.
+    "permissions2fast-fastapi>=0.5.1",
+]
+
+[dependency-groups]
+dev = [
+    "black",
+    "ruff",
+    "mypy>=1.0.0",
+    "pre-commit",
+    "build",
+    "twine",
+]
+test = [
+    "pytest>=7.0.0",
+    "pytest-asyncio>=0.21.0",
+    "pytest-cov>=4.0.0",
+    "httpx>=0.24.0",
+    "python-dotenv>=1.0.0",
+]
+
+[project.urls]
+Homepage = "https://github.com/AngelDanielSanchezCastillo/tenants2fast-fastapi"
+Documentation = "https://github.com/AngelDanielSanchezCastillo/tenants2fast-fastapi/tree/main/docs"
+Repository = "https://github.com/AngelDanielSanchezCastillo/tenants2fast-fastapi"
+Issues = "https://github.com/AngelDanielSanchezCastillo/tenants2fast-fastapi/issues"
+
+[tool.setuptools]
+package-dir = {"" = "src"}
+
+[tool.setuptools.packages.find]
+where = ["src"]
+include = ["tenant2fast_fastapi*"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+python_files = ["test_*.py"]
+python_classes = ["Test*"]
+python_functions = ["test_*"]
+asyncio_mode = "auto"
+asyncio_default_fixture_loop_scope = "session"
+asyncio_default_test_loop_scope = "session"
+
+[tool.mypy]
+python_version = "3.10"
+warn_return_any = true
+warn_unused_configs = true
+disallow_untyped_defs = false
