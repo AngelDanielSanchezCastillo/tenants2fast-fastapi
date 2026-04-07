@@ -6,9 +6,6 @@ resolution-markers = [
     "python_full_version < '3.14'",
 ]
 
-[manifest]
-overrides = [{ name = "oauth2fast-fastapi", specifier = "==0.2.2" }]
-
 [[package]]
 name = "aiosmtplib"
 version = "5.1.0"
@@ -1031,21 +1028,21 @@ wheels = [
 
 [[package]]
 name = "log2fast-fastapi"
-version = "0.1.0"
+version = "0.1.2"
 source = { registry = "https://pypi.org/simple" }
 dependencies = [
     { name = "fastapi" },
     { name = "pydantic" },
     { name = "pydantic-settings" },
 ]
-sdist = { url = "https://files.pythonhosted.org/packages/aa/17/b95aadf4ef94158afb057fbbb37cd5b1fe425607f4f2c90914fafd6ce28e/log2fast_fastapi-0.1.0.tar.gz", hash = "sha256:d0f571d0c92fae534d5310682807cfd0b7c46096d1905d385fbd894de7f082ae", size = 33965, upload-time = "2026-01-30T23:35:46.323Z" }
+sdist = { url = "https://files.pythonhosted.org/packages/0e/f5/ecab2e594bb2e35485becac0bf32bc60445dc3b5c353ed6116b839010595/log2fast_fastapi-0.1.2.tar.gz", hash = "sha256:964b3243bcde1bba0aa045449a0e7d3f51e130e74e421688cfce8aac86fbfb42", size = 34320, upload-time = "2026-03-18T23:40:16.537Z" }
 wheels = [
-    { url = "https://files.pythonhosted.org/packages/24/d5/527871faee562ed6e09c1fb88d2d1431206ede43a33e9d39f7893b4c063f/log2fast_fastapi-0.1.0-py3-none-any.whl", hash = "sha256:64198ba6179894590c1bb626a4f5bafe6643e87194e013a99f2433f3134945b0", size = 13739, upload-time = "2026-01-30T23:35:44.379Z" },
+    { url = "https://files.pythonhosted.org/packages/c2/e7/d266c2ff0dbc0b375e42edc9016a7c7dea0227c5e97f212642ee429d8d0d/log2fast_fastapi-0.1.2-py3-none-any.whl", hash = "sha256:42b7af9fd71c80b6b1a5faf0a0c51870009d36649f7270c93b0bf023ebc8fd8a", size = 13931, upload-time = "2026-03-18T23:40:15.214Z" },
 ]
 
 [[package]]
 name = "mailing2fast-fastapi"
-version = "0.2.0"
+version = "0.2.2"
 source = { registry = "https://pypi.org/simple" }
 dependencies = [
     { name = "aiosmtplib" },
@@ -1056,9 +1053,9 @@ dependencies = [
     { name = "pydantic-settings" },
     { name = "redis" },
 ]
-sdist = { url = "https://files.pythonhosted.org/packages/a5/d6/dbe7967af8b2815f64661f50fa563b240b9f2b65f16cbd64b354a27dd61a/mailing2fast_fastapi-0.2.0.tar.gz", hash = "sha256:dc005d560943217440eb2ee2478c9c6b4eee63f8f0ffeb1489deb9589c71e79c", size = 26206, upload-time = "2026-02-17T16:51:06.734Z" }
+sdist = { url = "https://files.pythonhosted.org/packages/cd/06/87d3b4bb37f6ceec1eeeb9c1afc4d58d61510ccdb43b11c07948e9eedfa7/mailing2fast_fastapi-0.2.2.tar.gz", hash = "sha256:230392af2208657c2b3b7111113f85f22f7038b5263c478a9206b29a3180f9ce", size = 26146, upload-time = "2026-04-02T09:46:59.247Z" }
 wheels = [
-    { url = "https://files.pythonhosted.org/packages/e7/17/dc0375aeba32ee9735c112f4ccec7126ab34332cc197482f07ceb65b3ce8/mailing2fast_fastapi-0.2.0-py3-none-any.whl", hash = "sha256:656f41feda25befcfd35a0df17d203bb5ea057f74f0f9f9ea06b1fc0af27ab03", size = 22257, upload-time = "2026-02-17T16:51:05.691Z" },
+    { url = "https://files.pythonhosted.org/packages/11/7e/1402ea89ed463b2826a3bd162df923265c25d82850b0d758010b52c9c3fa/mailing2fast_fastapi-0.2.2-py3-none-any.whl", hash = "sha256:6217bc5c251f46681316039a5bc6c371b361d8a1bc894bc6edd7fbebcc14f1c1", size = 22211, upload-time = "2026-04-02T09:46:58.142Z" },
 ]
 
 [[package]]
@@ -1276,7 +1273,7 @@ wheels = [
 
 [[package]]
 name = "oauth2fast-fastapi"
-version = "0.2.2"
+version = "0.3.0"
 source = { registry = "https://pypi.org/simple" }
 dependencies = [
     { name = "argon2-cffi" },
@@ -1286,11 +1283,11 @@ dependencies = [
     { name = "pgsqlasync2fast-fastapi" },
     { name = "python-jose", extra = ["cryptography"] },
     { name = "python-multipart" },
-    { name = "sqlmodel" },
+    { name = "tools2fast-fastapi" },
 ]
-sdist = { url = "https://files.pythonhosted.org/packages/24/af/4954046b15d53832abdf21ffd0533c6883e582d54baa4c517cadc56ab42d/oauth2fast_fastapi-0.2.2.tar.gz", hash = "sha256:52fe3561502dc7fd12470990974daa1e7fdf9cd541b610f5eae272d0dcca0998", size = 26399, upload-time = "2026-02-18T16:41:48.599Z" }
+sdist = { url = "https://files.pythonhosted.org/packages/c7/06/ca5dcf8d4335575bab07bb25972a21a926ca54ca2c7d9422569b2de34664/oauth2fast_fastapi-0.3.0.tar.gz", hash = "sha256:dcb20766eaa5351857329efd6bfac66ba12a53f36937ab9c9bcb04128181587e", size = 26173, upload-time = "2026-04-02T09:54:48.446Z" }
 wheels = [
-    { url = "https://files.pythonhosted.org/packages/8c/57/ad65bc9172a8f5ba8fd3a7ba2ae19c7f331d246efbfef94f00868665d916/oauth2fast_fastapi-0.2.2-py3-none-any.whl", hash = "sha256:dbcf0d592b639701aa32c47ce29b94e9369eca0f7715f09d63e9583789138c7a", size = 24100, upload-time = "2026-02-18T16:41:47.431Z" },
+    { url = "https://files.pythonhosted.org/packages/f2/61/2d0d6d39d101d3e8672a54cbfdab704ffd1b955d37b0f47b128f3d4724c5/oauth2fast_fastapi-0.3.0-py3-none-any.whl", hash = "sha256:62a0af78bf24ed337991be7037fb37d0b2cef4f7a973a46d07dc491afb8ad17f", size = 23240, upload-time = "2026-04-02T09:54:47.428Z" },
 ]
 
 [[package]]
@@ -1340,7 +1337,7 @@ wheels = [
 
 [[package]]
 name = "pgsqlasync2fast-fastapi"
-version = "0.1.1"
+version = "0.2.0"
 source = { registry = "https://pypi.org/simple" }
 dependencies = [
     { name = "asyncpg" },
@@ -1349,10 +1346,11 @@ dependencies = [
     { name = "pydantic" },
     { name = "pydantic-settings" },
     { name = "sqlalchemy" },
+    { name = "sqlmodel" },
 ]
-sdist = { url = "https://files.pythonhosted.org/packages/5c/8e/47c7e389e35c3af80a247ab3efd2c6c8772c4bb0140fe6b0fbe581482f80/pgsqlasync2fast_fastapi-0.1.1.tar.gz", hash = "sha256:f7577669a9b76332bfb465f98125c206db9f4ea0c2fe287b82f69204d4ed6fef", size = 15783, upload-time = "2026-02-17T08:34:00.934Z" }
+sdist = { url = "https://files.pythonhosted.org/packages/ee/82/bb27583aa7369bc11f5176f0d0ee4fbc179c72d87dca7b901056d5dc300e/pgsqlasync2fast_fastapi-0.2.0.tar.gz", hash = "sha256:4e9862fa44bb200730f3e2f472a9ee7e3399b50035803deb56c7404f59013dba", size = 15747, upload-time = "2026-04-02T09:17:50.765Z" }
 wheels = [
-    { url = "https://files.pythonhosted.org/packages/a2/a9/12b07ca33738af33a074b922e862e052470c56a371060630ff82aad62963/pgsqlasync2fast_fastapi-0.1.1-py3-none-any.whl", hash = "sha256:872f2031a5dbc467037a2f60fc0dd145b90036f83692e3de478f4abb0d4d3c4b", size = 13473, upload-time = "2026-02-17T08:33:59.081Z" },
+    { url = "https://files.pythonhosted.org/packages/cb/c8/39cbf26d4daf366c5149ee59dd53486e4617f1f3c9d50ab0db455ec3e141/pgsqlasync2fast_fastapi-0.2.0-py3-none-any.whl", hash = "sha256:c110ac0b01897e863dee9bd8ada50874e73343580e77ba7185b83c0183b28a18", size = 13407, upload-time = "2026-04-02T09:17:49.496Z" },
 ]
 
 [[package]]
@@ -2109,6 +2107,19 @@ wheels = [
     { url = "https://files.pythonhosted.org/packages/de/69/9aa0c6a505c2f80e519b43764f8b4ba93b5a0bbd2d9a9de6e2b24271b9a5/tomli-2.4.0-cp314-cp314t-win_amd64.whl", hash = "sha256:2add28aacc7425117ff6364fe9e06a183bb0251b03f986df0e78e974047571fd", size = 120504, upload-time = "2026-01-11T11:22:35.764Z" },
     { url = "https://files.pythonhosted.org/packages/b3/9f/f1668c281c58cfae01482f7114a4b88d345e4c140386241a1a24dcc9e7bc/tomli-2.4.0-cp314-cp314t-win_arm64.whl", hash = "sha256:2b1e3b80e1d5e52e40e9b924ec43d81570f0e7d09d11081b797bc4692765a3d4", size = 99561, upload-time = "2026-01-11T11:22:36.624Z" },
     { url = "https://files.pythonhosted.org/packages/23/d1/136eb2cb77520a31e1f64cbae9d33ec6df0d78bdf4160398e86eec8a8754/tomli-2.4.0-py3-none-any.whl", hash = "sha256:1f776e7d669ebceb01dee46484485f43a4048746235e683bcdffacdf1fb4785a", size = 14477, upload-time = "2026-01-11T11:22:37.446Z" },
+]
+
+[[package]]
+name = "tools2fast-fastapi"
+version = "0.1.4"
+source = { registry = "https://pypi.org/simple" }
+dependencies = [
+    { name = "fastapi" },
+    { name = "sqlmodel" },
+]
+sdist = { url = "https://files.pythonhosted.org/packages/d4/cf/a4b6f4217c7976fff5f6cb9416ef4a19141695b0c76d97c0951e439325f5/tools2fast_fastapi-0.1.4.tar.gz", hash = "sha256:a41acf68df216587f83db44a6709fa9caa23ce34b6a4d7ec3fd6eaf65f3aeebe", size = 18457, upload-time = "2026-03-27T18:42:41.105Z" }
+wheels = [
+    { url = "https://files.pythonhosted.org/packages/bd/e0/64e4e6d25362a466af2ef06916fd94e537e1cd31594e661a5fb02e830eac/tools2fast_fastapi-0.1.4-py3-none-any.whl", hash = "sha256:066958ad8167a6bad805428e0ddca6c36d606f2b88e7097ad386443656a61052", size = 18987, upload-time = "2026-03-27T18:42:40.068Z" },
 ]
 
 [[package]]
