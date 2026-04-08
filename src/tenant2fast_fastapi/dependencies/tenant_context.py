@@ -8,9 +8,10 @@ The tenant context is set by middleware and can be accessed via dependency injec
 from contextvars import ContextVar
 from datetime import datetime, timezone
 
-from fastapi import HTTPException, status
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlmodel import select
+from collections.abc import AsyncGenerator
+from fastapi import Depends, HTTPException, status
 
 from ..utils.tenant_cache import (
     get_tenant_data_cache as get_tenant_data,
@@ -19,6 +20,7 @@ from ..utils.tenant_cache import (
 from pgsqlasync2fast_fastapi.connection import get_manager
 from oauth2fast_fastapi.models.user_model import User
 from ..models.tenant_model import Tenant
+from ..databases.tenant_db_factory import get_tenant_session as get_factory_session
 
 # Context variable to store current tenant for the request
 _tenant_context: ContextVar[Tenant | None] = ContextVar("tenant_context", default=None)
@@ -117,3 +119,17 @@ async def load_tenant_by_id(tenant_id: int) -> Tenant | None:
     except Exception as e:
         print(f"⚠️  Error loading tenant by ID: {e}")
         return None
+
+
+async def get_tenant_db_session(
+    tenant: Tenant = Depends(get_current_tenant),
+) -> AsyncGenerator[AsyncSession, None]:
+    """
+    FastAPI dependency to get an AsyncSession for the current tenant's database.
+    """
+    session = await get_factory_session(tenant.id)
+    try:
+        yield session
+    finally:
+        await session.close()
+

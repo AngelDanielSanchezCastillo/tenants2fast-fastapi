@@ -24,6 +24,7 @@ from .dependencies import (
     get_user_context,
     set_tenant_context,
     set_user_context,
+    get_tenant_db_session,
 )
 
 __all__ = [
@@ -41,6 +42,7 @@ __all__ = [
     "get_user_context",
     "set_tenant_context",
     "set_user_context",
+    "get_tenant_db_session",
     "create_tenant_database",
     "get_tenant_engine",
     "initialize_tenant_schema",
