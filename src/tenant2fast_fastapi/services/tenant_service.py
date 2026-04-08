@@ -17,7 +17,7 @@ from ..schemas.tenant_schema import TenantCreate, TenantUpdate
 from ..utils import cache_tenant_data  # Imports from permissions2fast
 from ..models.tenant_model import Tenant
 from .tenant_rbac_seeder import seed_tenant_rbac
-from oauth2fast_fastapi import get_auth_session
+from pgsqlasync2fast_fastapi.connection import get_manager
 
 
 async def create_tenant(tenant_data: TenantCreate) -> Tenant:
@@ -32,8 +32,7 @@ async def create_tenant(tenant_data: TenantCreate) -> Tenant:
     5. Seed default RBAC data (Owner, Admin, Member)
     6. Cache tenant data
     """
-    session: AsyncSession = get_auth_session()
-    async with session:
+    async with await get_manager().get_session("auth") as session:
         # Check if slug already exists
         result = await session.execute(
             select(Tenant).where(Tenant.slug == tenant_data.slug)
@@ -106,24 +105,21 @@ async def create_tenant(tenant_data: TenantCreate) -> Tenant:
 
 async def get_tenant_by_id(tenant_id: int) -> Tenant | None:
     """Get tenant by ID."""
-    session: AsyncSession = get_auth_session()
-    async with session:
+    async with await get_manager().get_session("auth") as session:
         result = await session.execute(select(Tenant).where(Tenant.id == tenant_id))
         return result.scalar_one_or_none()
 
 
 async def get_tenant_by_slug(slug: str) -> Tenant | None:
     """Get tenant by slug."""
-    session: AsyncSession = get_auth_session()
-    async with session:
+    async with await get_manager().get_session("auth") as session:
         result = await session.execute(select(Tenant).where(Tenant.slug == slug))
         return result.scalar_one_or_none()
 
 
 async def list_tenants(skip: int = 0, limit: int = 100) -> tuple[list[Tenant], int]:
     """List all tenants with pagination."""
-    session: AsyncSession = get_auth_session()
-    async with session:
+    async with await get_manager().get_session("auth") as session:
         count_result = await session.execute(select(Tenant))
         total = len(count_result.scalars().all())
 
@@ -137,8 +133,7 @@ async def list_tenants(skip: int = 0, limit: int = 100) -> tuple[list[Tenant], i
 
 async def update_tenant(tenant_id: int, tenant_data: TenantUpdate) -> Tenant:
     """Update tenant metadata."""
-    session: AsyncSession = get_auth_session()
-    async with session:
+    async with await get_manager().get_session("auth") as session:
         result = await session.execute(select(Tenant).where(Tenant.id == tenant_id))
         tenant = result.scalar_one_or_none()
 
@@ -184,8 +179,7 @@ async def delete_tenant_permanently(tenant_id: int):
     Permanently delete a tenant and their database.
     USE WITH EXTREME CAUTION!
     """
-    session: AsyncSession = get_auth_session()
-    async with session:
+    async with await get_manager().get_session("auth") as session:
         result = await session.execute(select(Tenant).where(Tenant.id == tenant_id))
         tenant = result.scalar_one_or_none()
 
