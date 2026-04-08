@@ -17,7 +17,12 @@ async def seed_tenant_rbac(tenant_id: int):
     session = await get_tenant_session(tenant_id)
     async with session:
         # 1. Cargar datos del JSON
-        seed_path = os.path.join(os.path.dirname(__file__), "tenant_seed_data.json")
+        seed_path = os.path.join(
+            os.path.dirname(os.path.dirname(__file__)),
+            "data",
+            "seeders",
+            "tenant_seed_data.json"
+        )
         with open(seed_path, "r") as f:
             data = json.load(f)
 
