@@ -50,7 +50,7 @@ async def create_tenant(tenant_data: TenantCreate) -> Tenant:
         tenant = Tenant(
             name=tenant_data.name,
             slug=tenant_data.slug,
-            database_name="",  # Will be set after DB creation
+            database_name=f"pending_{tenant_data.slug}",  # Placeholder to satisfy unique + not null
             contact_email=tenant_data.contact_email,
             max_users=tenant_data.max_users,
         )

@@ -1,10 +1,14 @@
 from datetime import datetime
+from sqlalchemy import MetaData
+from sqlalchemy.orm import registry
 from sqlmodel import Field, SQLModel
-from ..databases.tenant_db_factory import tenant_metadata
+
+# MetaData exclusive for tenant-specific tables.
+tenant_metadata = MetaData()
+tenant_registry = registry(metadata=tenant_metadata)
 
 
-class TenantBaseModel(SQLModel):
-    metadata = tenant_metadata
+class TenantBaseModel(SQLModel, registry=tenant_registry):
     """
     Base model for all tenant-specific tables.
     

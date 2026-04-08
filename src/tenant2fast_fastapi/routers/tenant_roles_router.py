@@ -1,7 +1,7 @@
 from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from ..dependencies import get_current_tenant, require_tenant_permission
+from ..dependencies import get_current_tenant, has_tenant_permission
 from ..models import Tenant
 from ..schemas.rbac.role_schema import (
     TenantRoleRead,
@@ -18,7 +18,7 @@ router = APIRouter(prefix="/roles", tags=["Tenant Roles"])
     "/",
     response_model=TenantRoleRead,
     status_code=status.HTTP_201_CREATED,
-    dependencies=[Depends(require_tenant_permission("/roles", "POST"))]
+    dependencies=[Depends(has_tenant_permission("/roles", "POST"))]
 )
 async def create_role(
     role_data: TenantRoleCreate,
@@ -32,7 +32,7 @@ async def create_role(
 @router.get(
     "/",
     response_model=list[TenantRoleRead],
-    dependencies=[Depends(require_tenant_permission("/roles", "GET"))]
+    dependencies=[Depends(has_tenant_permission("/roles", "GET"))]
 )
 async def list_roles(
     skip: int = 0,
@@ -47,7 +47,7 @@ async def list_roles(
 @router.get(
     "/{role_id}",
     response_model=TenantRoleRead,
-    dependencies=[Depends(require_tenant_permission("/roles/{role_id}", "GET"))]
+    dependencies=[Depends(has_tenant_permission("/roles/{role_id}", "GET"))]
 )
 async def get_role(
     role_id: int,
@@ -64,7 +64,7 @@ async def get_role(
 @router.patch(
     "/{role_id}",
     response_model=TenantRoleRead,
-    dependencies=[Depends(require_tenant_permission("/roles/{role_id}", "PATCH"))]
+    dependencies=[Depends(has_tenant_permission("/roles/{role_id}", "PATCH"))]
 )
 async def update_role(
     role_id: int,
@@ -78,8 +78,8 @@ async def update_role(
 
 @router.delete(
     "/{role_id}",
-    status_code=status.HTTP_24_NO_CONTENT,
-    dependencies=[Depends(require_tenant_permission("/roles/{role_id}", "DELETE"))]
+    status_code=status.HTTP_204_NO_CONTENT,
+    dependencies=[Depends(has_tenant_permission("/roles/{role_id}", "DELETE"))]
 )
 async def delete_role(
     role_id: int,

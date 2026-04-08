@@ -6,15 +6,19 @@ The tenant context is set by middleware and can be accessed via dependency injec
 """
 
 from contextvars import ContextVar
+from datetime import datetime, timezone
 
 from fastapi import HTTPException, status
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlmodel import select
 
-from permissions2fast_fastapi.utils import cache_tenant_data, get_tenant_data
-from oauth2fast_fastapi import get_auth_session
+from ..utils.tenant_cache import (
+    get_tenant_data_cache as get_tenant_data,
+    set_tenant_data_cache as cache_tenant_data,
+)
+from pgsqlasync2fast_fastapi.connection import get_manager
 from oauth2fast_fastapi.models.user_model import User
-from ..models import Tenant
+from ..models.tenant_model import Tenant
 
 # Context variable to store current tenant for the request
 _tenant_context: ContextVar[Tenant | None] = ContextVar("tenant_context", default=None)
@@ -84,40 +88,32 @@ async def get_current_user() -> User:
 async def load_tenant_by_id(tenant_id: int) -> Tenant | None:
     """
     Load tenant from database or cache.
-
-    Args:
-        tenant_id: Tenant's ID
-
-    Returns:
-        Tenant object or None if not found
     """
     # Try cache first
     cached_data = await get_tenant_data(tenant_id)
     if cached_data:
-        # Pydantic will handle the mapping from dict
         return Tenant(**cached_data)
 
-    # Load from database
-    session: AsyncSession = get_auth_session()
-    async with session:
-        result = await session.execute(select(Tenant).where(Tenant.id == tenant_id))
-        tenant = result.scalar_one_or_none()
+    # Load from database manually using the manager
+    try:
+        manager = get_manager()
+        auth_engine = manager.get_engine("auth")
+        
+        async with AsyncSession(auth_engine, expire_on_commit=False) as session:
+            result = await session.execute(select(Tenant).where(Tenant.id == tenant_id))
+            tenant = result.scalar_one_or_none()
 
-        if tenant:
-            await cache_tenant_data(
-                tenant_id,
-                {
-                    "id": tenant.id,
-                    "name": tenant.name,
-                    "slug": tenant.slug,
-                    "database_name": tenant.database_name,
-                    "is_active": tenant.is_active,
-                    "contact_email": tenant.contact_email,
-                    "max_users": tenant.max_users,
-                    "created_at": tenant.created_at.isoformat(),
-                    "updated_at": tenant.updated_at.isoformat(),
-                },
-            )
+            if tenant:
+                # Prepare data for cache
+                # Serialize datetimes to ISO strings for JSON cache
+                data = tenant.model_dump()
+                for key, val in data.items():
+                    if isinstance(val, (datetime)):
+                        data[key] = val.isoformat()
+                        
+                await cache_tenant_data(tenant_id, data)
 
-        return tenant
-
+            return tenant
+    except Exception as e:
+        print(f"⚠️  Error loading tenant by ID: {e}")
+        return None

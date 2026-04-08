@@ -70,3 +70,49 @@ async def invalidate_tenant_user_cache(tenant_id: int, user_id: int):
         await client.delete(key)
     except Exception:
         pass
+
+
+async def get_user_tenant_cache(user_id: int) -> Optional[int]:
+    """Get the cached tenant_id for a global user."""
+    client = _get_redis_client()
+    if not client:
+        return None
+    try:
+        data = await client.get(f"user:{user_id}:tenant_id")
+        return int(data) if data else None
+    except Exception:
+        return None
+
+
+async def set_user_tenant_cache(user_id: int, tenant_id: int, ttl: int = 3600):
+    """Cache the tenant_id for a global user."""
+    client = _get_redis_client()
+    if not client:
+        return
+    try:
+        await client.set(f"user:{user_id}:tenant_id", tenant_id, ex=ttl)
+    except Exception:
+        pass
+
+
+async def get_tenant_data_cache(tenant_id: int) -> Optional[dict]:
+    """Get the cached data for a tenant (Auth DB record)."""
+    client = _get_redis_client()
+    if not client:
+        return None
+    try:
+        data = await client.get(f"tenant:{tenant_id}:data")
+        return json.loads(data) if data else None
+    except Exception:
+        return None
+
+
+async def set_tenant_data_cache(tenant_id: int, data: dict, ttl: int = 3600):
+    """Cache the auth data for a tenant."""
+    client = _get_redis_client()
+    if not client:
+        return
+    try:
+        await client.set(f"tenant:{tenant_id}:data", json.dumps(data), ex=ttl)
+    except Exception:
+        pass

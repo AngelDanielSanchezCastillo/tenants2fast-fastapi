@@ -5,23 +5,23 @@ Utilities for managing tenant database schemas and migrations.
 """
 
 from sqlalchemy.ext.asyncio import AsyncSession
-from sqlmodel import SQLModel, select
-
-from ..databases.tenant_db_factory import get_tenant_engine
+from ..databases.tenant_db_factory import get_tenant_engine, tenant_metadata
 
 
 async def run_tenant_migrations(tenant_id: int):
     """
     Run migrations on a tenant's database.
-    Creates all tables registered in SQLModel.metadata.
-
-    Args:
-        tenant_id: Tenant's ID
+    Creates all tables registered in tenant_metadata.
+    
+    Ensures all models are imported so they register with metadata.
     """
+    from .models_loader import import_tenant_models
+    import_tenant_models()
+    
     engine = get_tenant_engine(tenant_id)
 
     async with engine.begin() as conn:
-        await conn.run_sync(SQLModel.metadata.create_all)
+        await conn.run_sync(tenant_metadata.create_all)
 
     print(f"✅ Ran migrations for tenant {tenant_id}")
 
@@ -54,28 +54,54 @@ async def drop_all_tenant_tables(tenant_id: int):
     engine = get_tenant_engine(tenant_id)
 
     async with engine.begin() as conn:
-        await conn.run_sync(SQLModel.metadata.drop_all)
+        await conn.run_sync(tenant_metadata.drop_all)
 
     print(f"🗑️  Dropped all tables for tenant {tenant_id}")
 
 
-async def migrate_all_tenants():
+async def run_all_tenant_migrations():
     """
     Run migrations on all active tenant databases.
     Useful when you add new models/fields.
     """
-    from oauth2fast_fastapi import get_auth_session
-    from tenant2fast_fastapi.models import Tenant
-
-    session: AsyncSession = get_auth_session()
-    async with session:
+    from sqlalchemy import select
+    from pgsqlasync2fast_fastapi.connection import get_manager
+    auth_engine = get_manager().get_engine("auth")
+    from tenant2fast_fastapi.models.tenant_model import Tenant
+    
+    async with AsyncSession(auth_engine) as session:
         result = await session.execute(select(Tenant).where(Tenant.is_active == True))  # noqa: E712
         tenants = result.scalars().all()
 
-    for tenant in tenants:
-        try:
-            await run_tenant_migrations(tenant.id)
-        except Exception as e:
-            print(f"❌ Failed to migrate tenant {tenant.id}: {e}")
+        for tenant in tenants:
+            try:
+                await run_tenant_migrations(tenant.id)
+            except Exception as e:
+                print(f"❌ Failed to migrate tenant {tenant.id}: {e}")
 
-    print(f"✅ Migrated {len(tenants)} tenant databases")
+        print(f"✅ Migrated {len(tenants)} tenant databases")
+
+
+async def seed_all_tenants():
+    """
+    Run the RBAC seeder on all active tenant databases.
+    Ensures roles and permissions are up to date across the entire platform.
+    """
+    from sqlalchemy import select
+    from pgsqlasync2fast_fastapi.connection import get_manager
+    auth_engine = get_manager().get_engine("auth")
+    
+    from tenant2fast_fastapi.models.tenant_model import Tenant
+    from ..services.tenant_rbac_seeder import seed_tenant_rbac
+
+    async with AsyncSession(auth_engine) as session:
+        result = await session.execute(select(Tenant).where(Tenant.is_active == True))  # noqa: E712
+        tenants = result.scalars().all()
+
+        for tenant in tenants:
+            try:
+                await seed_tenant_rbac(tenant.id)
+            except Exception as e:
+                print(f"❌ Failed to seed tenant {tenant.id}: {e}")
+
+        print(f"✅ Seeded {len(tenants)} tenant databases with default RBAC")

@@ -1,7 +1,7 @@
 from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from ..dependencies import get_current_tenant, require_tenant_permission
+from ..dependencies import get_current_tenant, has_tenant_permission
 from ..models import Tenant
 from ..schemas.rbac.permission_schema import (
     TenantPermissionRead,
@@ -17,7 +17,7 @@ router = APIRouter(prefix="/permissions", tags=["Tenant Permissions"])
 @router.get(
     "/",
     response_model=list[TenantPermissionRead],
-    dependencies=[Depends(require_tenant_permission("/permissions", "GET"))]
+    dependencies=[Depends(has_tenant_permission("/permissions", "GET"))]
 )
 async def list_permissions(
     tenant: Tenant = Depends(get_current_tenant)
@@ -30,7 +30,7 @@ async def list_permissions(
 @router.get(
     "/categories",
     # response_model=list[TenantPermissionCategoryRead],
-    dependencies=[Depends(require_tenant_permission("/permissions/categories", "GET"))]
+    dependencies=[Depends(has_tenant_permission("/permissions/categories", "GET"))]
 )
 async def list_categories(
     tenant: Tenant = Depends(get_current_tenant)
@@ -43,7 +43,7 @@ async def list_categories(
 @router.get(
     "/{permission_id}",
     response_model=TenantPermissionRead,
-    dependencies=[Depends(require_tenant_permission("/permissions/{permission_id}", "GET"))]
+    dependencies=[Depends(has_tenant_permission("/permissions/{permission_id}", "GET"))]
 )
 async def get_permission(
     permission_id: int,

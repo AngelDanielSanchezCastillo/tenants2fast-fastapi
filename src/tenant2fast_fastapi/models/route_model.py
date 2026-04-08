@@ -4,12 +4,11 @@ from .bases import TenantBaseModel
 
 class TenantRoute(TenantBaseModel, table=True):
     """
-    Route that can be protected.
+    Route that an application has.
     """
 
     __tablename__ = "tenant_routes"
 
-    name: str
-    path: str = Field(index=True)   # ej: "/reports/{id}"
-    method: str = Field(default="*") # GET, POST, * ...
-    is_active: bool = Field(default=True)
+    path: str = Field(index=True)
+    method: str = Field(index=True, default="GET")
+    description: str | None = Field(default=None)

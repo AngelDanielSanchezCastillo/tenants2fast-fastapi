@@ -9,7 +9,7 @@ from .tenant_context import (
     set_tenant_context,
     set_user_context,
 )
-from .tenant_rbac import require_tenant_permission, get_current_tenant_user
+from .tenant_rbac import has_tenant_permission, has_tenant_role, get_current_tenant_user
 
 __all__ = [
     "get_current_tenant",
@@ -17,7 +17,8 @@ __all__ = [
     "get_tenant_context",
     "get_user_context",
     "load_tenant_by_id",
-    "require_tenant_permission",
+    "has_tenant_permission",
+    "has_tenant_role",
     "get_current_tenant_user",
     "set_tenant_context",
     "set_user_context",

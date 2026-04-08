@@ -4,7 +4,7 @@ from .bases import TenantBaseModel
 
 class TenantUserRole(TenantBaseModel, table=True):
     """
-    Many-to-many relationship between users and roles in a tenant.
+    Link between a tenant user and a role.
     """
 
     __tablename__ = "tenant_user_roles"
@@ -15,7 +15,7 @@ class TenantUserRole(TenantBaseModel, table=True):
 
 class TenantRolePermission(TenantBaseModel, table=True):
     """
-    Many-to-many relationship between roles and permissions.
+    Link between a role and a permission.
     """
 
     __tablename__ = "tenant_role_permissions"
@@ -24,9 +24,21 @@ class TenantRolePermission(TenantBaseModel, table=True):
     permission_id: int = Field(foreign_key="tenant_permissions.id", index=True)
 
 
+class TenantPermissionRoute(TenantBaseModel, table=True):
+    """
+    Link between a permission and a route.
+    """
+
+    __tablename__ = "tenant_permission_routes"
+
+    permission_id: int = Field(foreign_key="tenant_permissions.id", index=True)
+    route_id: int = Field(foreign_key="tenant_routes.id", index=True)
+
+
 class TenantUserPermission(TenantBaseModel, table=True):
     """
-    Direct assignment of permissions to users (overrides).
+    Direct link between a tenant user and a permission (Allow or Deny).
+    This can be used to override roles.
     """
 
     __tablename__ = "tenant_user_permissions"
@@ -34,14 +46,3 @@ class TenantUserPermission(TenantBaseModel, table=True):
     user_id: int = Field(foreign_key="tenant_users.id", index=True)
     permission_id: int = Field(foreign_key="tenant_permissions.id", index=True)
     is_allowed: bool = Field(default=True)
-
-
-class TenantPermissionRoute(TenantBaseModel, table=True):
-    """
-    Mapping between permissions and the routes they protect.
-    """
-
-    __tablename__ = "tenant_permission_routes"
-
-    permission_id: int = Field(foreign_key="tenant_permissions.id", index=True)
-    route_id: int = Field(foreign_key="tenant_routes.id", index=True)

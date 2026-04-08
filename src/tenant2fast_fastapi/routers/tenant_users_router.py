@@ -3,7 +3,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from ..dependencies import (
     get_current_tenant,
-    require_tenant_permission,
+    has_tenant_permission,
     get_current_tenant_user
 )
 from ..models import Tenant, TenantUser
@@ -23,7 +23,7 @@ router = APIRouter(prefix="/users", tags=["Tenant Users"])
     "/",
     response_model=TenantUserRead,
     status_code=status.HTTP_201_CREATED,
-    dependencies=[Depends(require_tenant_permission("/users", "POST"))]
+    dependencies=[Depends(has_tenant_permission("/users", "POST"))]
 )
 async def add_user(
     user_data: TenantUserCreate,
@@ -37,7 +37,7 @@ async def add_user(
 @router.get(
     "/",
     response_model=list[TenantUserRead],
-    dependencies=[Depends(require_tenant_permission("/users", "GET"))]
+    dependencies=[Depends(has_tenant_permission("/users", "GET"))]
 )
 async def list_users(
     skip: int = 0,
@@ -63,7 +63,7 @@ async def get_me(
 @router.get(
     "/{user_id}",
     response_model=TenantUserRead,
-    dependencies=[Depends(require_tenant_permission("/users/{user_id}", "GET"))]
+    dependencies=[Depends(has_tenant_permission("/users/{user_id}", "GET"))]
 )
 async def get_user(
     user_id: int,
@@ -80,7 +80,7 @@ async def get_user(
 @router.patch(
     "/{user_id}",
     response_model=TenantUserRead,
-    dependencies=[Depends(require_tenant_permission("/users/{user_id}", "PATCH"))]
+    dependencies=[Depends(has_tenant_permission("/users/{user_id}", "PATCH"))]
 )
 async def update_user(
     user_id: int,
@@ -95,7 +95,7 @@ async def update_user(
 @router.delete(
     "/{user_id}",
     status_code=status.HTTP_204_NO_CONTENT,
-    dependencies=[Depends(require_tenant_permission("/users/{user_id}", "DELETE"))]
+    dependencies=[Depends(has_tenant_permission("/users/{user_id}", "DELETE"))]
 )
 async def remove_user(
     user_id: int,
