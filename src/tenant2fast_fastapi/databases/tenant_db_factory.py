@@ -35,11 +35,12 @@ def get_tenant_db_url(tenant_database_name: str) -> str:
     """
     manager = get_manager()
     try:
-        # Use the 'auth' connection as the template
-        auth_url = manager.config.get_connection_url("auth")
+        # Use the base connection as the template (often superuser)
+        base_conn_name = tenant_settings.base_db_connection.get_secret_value()
+        base_url = manager.config.get_connection_url(base_conn_name)
         # Swap the database name at the end of the URL
-        base_url, _ = auth_url.rsplit("/", 1)
-        return f"{base_url}/{tenant_database_name}"
+        base_url_prefix, _ = base_url.rsplit("/", 1)
+        return f"{base_url_prefix}/{tenant_database_name}"
     except Exception:
         # Fallback to current settings
         base_url = db_settings.get_connection_url() # Uses default
@@ -76,23 +77,24 @@ async def register_tenant_engine(tenant_id: int, database_name: str):
     if manager.config.has_connection(conn_name):
         return manager.get_engine(conn_name)
     
-    # Get auth config as template
+    # Get base config as template
     try:
-        auth_conn = manager.config.get_connection("auth")
+        base_conn_name = tenant_settings.base_db_connection.get_secret_value()
+        base_conn = manager.config.get_connection(base_conn_name)
     except ValueError:
-        # Fallback to default if 'auth' not found
-        auth_conn = manager.config.get_connection()
+        # Fallback to default if not found
+        base_conn = manager.config.get_connection()
 
     # Register the connection in the manager
     tenant_conn = DatabaseConnectionSettings(
-        host=auth_conn.host,
-        port=auth_conn.port,
-        username=auth_conn.username,
-        password=auth_conn.password,
+        host=base_conn.host,
+        port=base_conn.port,
+        username=base_conn.username,
+        password=base_conn.password,
         database=database_name,
         pool_size=tenant_settings.max_tenant_connections,
         max_overflow=10, # Default value
-        echo=auth_conn.echo
+        echo=base_conn.echo
     )
     
     # Inject into manager's config
@@ -123,7 +125,7 @@ async def create_tenant_database(tenant_id: int) -> str:
         db_name = tenant.database_name if tenant else _tenant_db_name(tenant_id)
         
         # 2. Create the database using pgsqlasync2fast logic
-        await create_database(db_name, connection_name="auth")
+        await create_database(db_name, connection_name=tenant_settings.base_db_connection.get_secret_value())
         
         # 3. Register the engine for future use
         await register_tenant_engine(tenant_id, db_name)
@@ -172,7 +174,7 @@ async def delete_tenant_database(tenant_id: int):
         await dispose_tenant_engine(tenant_id)
         
         # 2. Drop database
-        await drop_database(db_name, connection_name="auth")
+        await drop_database(db_name, connection_name=tenant_settings.base_db_connection.get_secret_value())
         
         print(f"✅ Database '{db_name}' dropped successfully")
 

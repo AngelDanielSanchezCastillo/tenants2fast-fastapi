@@ -7,20 +7,11 @@ Reads from environment variables with TENANT_ prefix.
 
 import os
 
-from pydantic import BaseModel, SecretStr
+from pydantic import SecretStr
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
 # Look for .env in the current working directory (where the app is running)
 DOTENV_PATH = os.path.join(os.getcwd(), ".env")
-
-
-class DatabaseSettings(BaseModel):
-    """Database configuration for tenant management."""
-    username: str = "postgres"
-    password: SecretStr = SecretStr("postgres")
-    hostname: str = "localhost"
-    port: int = 5432
-    name: str = "postgres"  # Default database for superuser operations
 
 
 class TenantSettings(BaseSettings):
@@ -37,8 +28,8 @@ class TenantSettings(BaseSettings):
     # Database prefix for tenant databases
     db_prefix: str = "tenant_"
     
-    # Superuser database settings (for creating tenant databases)
-    superuser_db: DatabaseSettings = DatabaseSettings()
+    # pgsqlasync2fast-fastapi connection settings (used for tenant database management)
+    base_db_connection: SecretStr = SecretStr("tenant")
     
     # Connection pool settings
     max_tenant_connections: int = 5
