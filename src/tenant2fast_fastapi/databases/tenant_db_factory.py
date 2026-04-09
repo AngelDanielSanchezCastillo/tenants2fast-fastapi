@@ -1,5 +1,5 @@
 from sqlalchemy import MetaData
-from sqlalchemy.ext.asyncio import AsyncSession, create_async_engine
+from sqlmodel.ext.asyncio.session import AsyncSession
 
 from pgsqlasync2fast_fastapi import create_database, drop_database
 from pgsqlasync2fast_fastapi.connection import get_manager
@@ -112,14 +112,14 @@ async def create_tenant_database(tenant_id: int) -> str:
     Returns the name of the created database.
     """
     # 1. Get tenant details from Auth DB
-    from sqlalchemy.ext.asyncio import AsyncSession
+    from sqlmodel.ext.asyncio.session import AsyncSession
     from sqlmodel import select
     from ..models.tenant_model import Tenant
     
     auth_engine = get_manager().get_engine("auth")
     async with AsyncSession(auth_engine) as session:
-        result = await session.execute(select(Tenant).where(Tenant.id == tenant_id))
-        tenant = result.scalar_one_or_none()
+        result = await session.exec(select(Tenant).where(Tenant.id == tenant_id))
+        tenant = result.one_or_none()
         
         # If tenant not found, use naming convention (for some standalone tests)
         db_name = tenant.database_name if tenant else _tenant_db_name(tenant_id)
@@ -159,14 +159,14 @@ async def delete_tenant_database(tenant_id: int):
     """
     Drop a tenant's physical database and remove its engine from cache.
     """
-    from sqlalchemy.ext.asyncio import AsyncSession
+    from sqlmodel.ext.asyncio.session import AsyncSession
     from sqlmodel import select
     from ..models.tenant_model import Tenant
     
     auth_engine = get_manager().get_engine("auth")
     async with AsyncSession(auth_engine) as session:
-        result = await session.execute(select(Tenant).where(Tenant.id == tenant_id))
-        tenant = result.scalar_one_or_none()
+        result = await session.exec(select(Tenant).where(Tenant.id == tenant_id))
+        tenant = result.one_or_none()
         
         db_name = tenant.database_name if tenant else _tenant_db_name(tenant_id)
         

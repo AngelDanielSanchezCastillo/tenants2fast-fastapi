@@ -1,6 +1,6 @@
 import json
 import os
-from sqlalchemy.ext.asyncio import AsyncSession
+from sqlmodel.ext.asyncio.session import AsyncSession
 from sqlmodel import select
 
 from ..models.role_model import TenantRole
@@ -28,10 +28,9 @@ async def seed_tenant_rbac(tenant_id: int):
 
         # 2. Seed Roles
         for role_data in data.get("roles", []):
-            result = await session.execute(
-                select(TenantRole).where(TenantRole.name == role_data["name"])
+            result = await session.exec(select(TenantRole).where(TenantRole.name == role_data["name"])
             )
-            if not result.scalar_one_or_none():
+            if not result.one_or_none():
                 role = TenantRole(
                     name=role_data["name"],
                     description=role_data["description"]
@@ -41,12 +40,11 @@ async def seed_tenant_rbac(tenant_id: int):
         # 3. Seed Categories and Permissions
         for cat_data in data.get("categories", []):
             # Find or create category
-            result = await session.execute(
-                select(TenantPermissionCategory).where(
+            result = await session.exec(select(TenantPermissionCategory).where(
                     TenantPermissionCategory.name == cat_data["name"]
                 )
             )
-            category = result.scalar_one_or_none()
+            category = result.one_or_none()
             if not category:
                 category = TenantPermissionCategory(name=cat_data["name"])
                 session.add(category)
@@ -55,12 +53,11 @@ async def seed_tenant_rbac(tenant_id: int):
 
             # Seed permissions for this category
             for perm_data in cat_data.get("permissions", []):
-                result = await session.execute(
-                    select(TenantPermission).where(
+                result = await session.exec(select(TenantPermission).where(
                         TenantPermission.name == perm_data["name"]
                     )
                 )
-                if not result.scalar_one_or_none():
+                if not result.one_or_none():
                     permission = TenantPermission(
                         name=perm_data["name"],
                         permission_category_id=category.id

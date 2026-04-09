@@ -5,7 +5,7 @@ Business logic for tenant operations including database provisioning.
 """
 
 from fastapi import HTTPException, status
-from sqlalchemy.ext.asyncio import AsyncSession
+from sqlmodel.ext.asyncio.session import AsyncSession
 from sqlmodel import select
 
 from ..databases.tenant_db_factory import (
@@ -34,10 +34,9 @@ async def create_tenant(tenant_data: TenantCreate) -> Tenant:
     """
     async with await get_manager().get_session("auth") as session:
         # Check if slug already exists
-        result = await session.execute(
-            select(Tenant).where(Tenant.slug == tenant_data.slug)
+        result = await session.exec(select(Tenant).where(Tenant.slug == tenant_data.slug)
         )
-        existing = result.scalar_one_or_none()
+        existing = result.one_or_none()
 
         if existing:
             raise HTTPException(
@@ -106,27 +105,26 @@ async def create_tenant(tenant_data: TenantCreate) -> Tenant:
 async def get_tenant_by_id(tenant_id: int) -> Tenant | None:
     """Get tenant by ID."""
     async with await get_manager().get_session("auth") as session:
-        result = await session.execute(select(Tenant).where(Tenant.id == tenant_id))
-        return result.scalar_one_or_none()
+        result = await session.exec(select(Tenant).where(Tenant.id == tenant_id))
+        return result.one_or_none()
 
 
 async def get_tenant_by_slug(slug: str) -> Tenant | None:
     """Get tenant by slug."""
     async with await get_manager().get_session("auth") as session:
-        result = await session.execute(select(Tenant).where(Tenant.slug == slug))
-        return result.scalar_one_or_none()
+        result = await session.exec(select(Tenant).where(Tenant.slug == slug))
+        return result.one_or_none()
 
 
 async def list_tenants(skip: int = 0, limit: int = 100) -> tuple[list[Tenant], int]:
     """List all tenants with pagination."""
     async with await get_manager().get_session("auth") as session:
-        count_result = await session.execute(select(Tenant))
-        total = len(count_result.scalars().all())
+        count_result = await session.exec(select(Tenant))
+        total = len(count_result.all())
 
-        result = await session.execute(
-            select(Tenant).offset(skip).limit(limit).order_by(Tenant.created_at.desc())
+        result = await session.exec(select(Tenant).offset(skip).limit(limit).order_by(Tenant.created_at.desc())
         )
-        tenants = result.scalars().all()
+        tenants = result.all()
 
         return list(tenants), total
 
@@ -134,8 +132,8 @@ async def list_tenants(skip: int = 0, limit: int = 100) -> tuple[list[Tenant], i
 async def update_tenant(tenant_id: int, tenant_data: TenantUpdate) -> Tenant:
     """Update tenant metadata."""
     async with await get_manager().get_session("auth") as session:
-        result = await session.execute(select(Tenant).where(Tenant.id == tenant_id))
-        tenant = result.scalar_one_or_none()
+        result = await session.exec(select(Tenant).where(Tenant.id == tenant_id))
+        tenant = result.one_or_none()
 
         if not tenant:
             raise HTTPException(
@@ -180,8 +178,8 @@ async def delete_tenant_permanently(tenant_id: int):
     USE WITH EXTREME CAUTION!
     """
     async with await get_manager().get_session("auth") as session:
-        result = await session.execute(select(Tenant).where(Tenant.id == tenant_id))
-        tenant = result.scalar_one_or_none()
+        result = await session.exec(select(Tenant).where(Tenant.id == tenant_id))
+        tenant = result.one_or_none()
 
         if not tenant:
             raise HTTPException(

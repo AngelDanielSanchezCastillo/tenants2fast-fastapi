@@ -12,7 +12,7 @@ import pytest
 os.environ["DB_CONNECTIONS__AUTH__IS_SUPERUSER"] = "true"
 
 from typing import AsyncGenerator, Generator
-from sqlalchemy.ext.asyncio import AsyncSession
+from sqlmodel.ext.asyncio.session import AsyncSession
 from sqlalchemy import text
 from sqlmodel import select
 

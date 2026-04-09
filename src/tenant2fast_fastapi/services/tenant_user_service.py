@@ -1,5 +1,5 @@
 from fastapi import HTTPException, status
-from sqlalchemy.ext.asyncio import AsyncSession
+from sqlmodel.ext.asyncio.session import AsyncSession
 from sqlmodel import select
 
 from oauth2fast_fastapi import get_auth_session
@@ -22,10 +22,9 @@ async def add_user_to_tenant(
     auth_session = get_auth_session()
     async with auth_session:
         # 1. Validate user exists in Auth
-        result = await auth_session.execute(
-            select(AuthUser).where(AuthUser.id == user_data.auth_user_id)
+        result = await auth_session.exec(select(AuthUser).where(AuthUser.id == user_data.auth_user_id)
         )
-        auth_user = result.scalar_one_or_none()
+        auth_user = result.one_or_none()
         
         if not auth_user:
             raise HTTPException(
@@ -34,13 +33,12 @@ async def add_user_to_tenant(
             )
             
         # 2. Check if already in tenant (membership record)
-        result = await auth_session.execute(
-            select(UserTenant).where(
+        result = await auth_session.exec(select(UserTenant).where(
                 UserTenant.tenant_id == tenant_id,
                 UserTenant.user_id == user_data.auth_user_id
             )
         )
-        if result.scalar_one_or_none():
+        if result.one_or_none():
             raise HTTPException(
                 status_code=status.HTTP_400_BAD_REQUEST,
                 detail="User is already a member of this tenant",
@@ -71,26 +69,24 @@ async def add_user_to_tenant(
 
 async def get_tenant_user(user_id: int, session: AsyncSession) -> TenantUser | None:
     """Get a tenant user by their internal ID."""
-    result = await session.execute(select(TenantUser).where(TenantUser.id == user_id))
-    return result.scalar_one_or_none()
+    result = await session.exec(select(TenantUser).where(TenantUser.id == user_id))
+    return result.one_or_none()
 
 
 async def get_tenant_user_by_auth_id(auth_user_id: int, session: AsyncSession) -> TenantUser | None:
     """Get a tenant user by their Auth user ID."""
-    result = await session.execute(
-        select(TenantUser).where(TenantUser.auth_user_id == auth_user_id)
+    result = await session.exec(select(TenantUser).where(TenantUser.auth_user_id == auth_user_id)
     )
-    return result.scalar_one_or_none()
+    return result.one_or_none()
 
 
 async def list_tenant_users(
     session: AsyncSession, skip: int = 0, limit: int = 100
 ) -> list[TenantUser]:
     """List all users in the tenant."""
-    result = await session.execute(
-        select(TenantUser).offset(skip).limit(limit)
+    result = await session.exec(select(TenantUser).offset(skip).limit(limit)
     )
-    return list(result.scalars().all())
+    return list(result.all())
 
 
 async def update_tenant_user(
@@ -132,13 +128,12 @@ async def remove_user_from_tenant(
     # 2. Delete from Auth DB
     auth_session = get_auth_session()
     async with auth_session:
-        result = await auth_session.execute(
-            select(UserTenant).where(
+        result = await auth_session.exec(select(UserTenant).where(
                 UserTenant.tenant_id == tenant_id,
                 UserTenant.user_id == auth_user_id
             )
         )
-        membership = result.scalar_one_or_none()
+        membership = result.one_or_none()
         if membership:
             await auth_session.delete(membership)
             await auth_session.commit()

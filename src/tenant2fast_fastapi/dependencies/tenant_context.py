@@ -8,7 +8,7 @@ The tenant context is set by middleware and can be accessed via dependency injec
 from contextvars import ContextVar
 from datetime import datetime, timezone
 
-from sqlalchemy.ext.asyncio import AsyncSession
+from sqlmodel.ext.asyncio.session import AsyncSession
 from sqlmodel import select
 from collections.abc import AsyncGenerator
 from fastapi import Depends, HTTPException, status
@@ -102,8 +102,8 @@ async def load_tenant_by_id(tenant_id: int) -> Tenant | None:
         auth_engine = manager.get_engine("auth")
         
         async with AsyncSession(auth_engine, expire_on_commit=False) as session:
-            result = await session.execute(select(Tenant).where(Tenant.id == tenant_id))
-            tenant = result.scalar_one_or_none()
+            result = await session.exec(select(Tenant).where(Tenant.id == tenant_id))
+            tenant = result.one_or_none()
 
             if tenant:
                 # Prepare data for cache

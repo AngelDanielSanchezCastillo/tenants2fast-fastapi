@@ -8,7 +8,7 @@ and sets the tenant-specific database connection for the duration of the request
 from fastapi import Request, Response
 from starlette.middleware.base import BaseHTTPMiddleware
 from starlette.types import ASGIApp
-from sqlalchemy.ext.asyncio import AsyncSession
+from sqlmodel.ext.asyncio.session import AsyncSession
 from sqlmodel import select
 
 from ..databases.tenant_db_factory import register_tenant_engine
@@ -87,8 +87,8 @@ class TenantMiddleware(BaseHTTPMiddleware):
             auth_engine = manager.get_engine("auth")
 
             async with AsyncSession(auth_engine, expire_on_commit=False) as session:
-                result = await session.execute(select(User).where(User.email == email))
-                return result.scalar_one_or_none()
+                result = await session.exec(select(User).where(User.email == email))
+                return result.one_or_none()
 
         except Exception:
             return None
@@ -103,8 +103,8 @@ class TenantMiddleware(BaseHTTPMiddleware):
         
         async with AsyncSession(auth_engine, expire_on_commit=False) as session:
             from tenant2fast_fastapi.models.user_tenant_model import UserTenant
-            result = await session.execute(select(UserTenant).where(UserTenant.user_id == user_id))
-            links = result.scalars().all()
+            result = await session.exec(select(UserTenant).where(UserTenant.user_id == user_id))
+            links = result.all()
             
             if not links:
                 return None

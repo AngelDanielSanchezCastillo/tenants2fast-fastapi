@@ -3,7 +3,7 @@ test_seeder.py – tests for RBAC seeder and mass-update functionality.
 """
 
 import pytest
-from sqlalchemy import select
+from sqlmodel import select
 from tenant2fast_fastapi.services.tenant_rbac_seeder import seed_tenant_rbac
 from tenant2fast_fastapi.utils.tenant_migrations import seed_all_tenants
 from tenant2fast_fastapi.models.role_model import TenantRole
@@ -18,15 +18,15 @@ async def test_seed_tenant_rbac_creates_defaults(test_tenant):
     session = await get_tenant_session(test_tenant.id)
     async with session:
         # Check Roles
-        roles = await session.execute(select(TenantRole))
-        role_names = [r.name for r in roles.scalars().all()]
+        roles = await session.exec(select(TenantRole))
+        role_names = [r.name for r in roles.all()]
         assert "Owner" in role_names
         assert "Admin" in role_names
         assert "Member" in role_names
 
         # Check Permissions
-        perms = await session.execute(select(TenantPermission))
-        perm_names = [p.name for p in perms.scalars().all()]
+        perms = await session.exec(select(TenantPermission))
+        perm_names = [p.name for p in perms.all()]
         assert "view_tenant_info" in perm_names
 
 
@@ -39,8 +39,8 @@ async def test_seed_tenant_rbac_is_idempotent(test_tenant):
     session = await get_tenant_session(test_tenant.id)
     async with session:
         # Verify counts
-        roles_count = await session.execute(select(TenantRole))
-        role_all = roles_count.scalars().all()
+        roles_count = await session.exec(select(TenantRole))
+        role_all = roles_count.all()
         # Should be exactly 3 (Owner, Admin, Member)
         assert len(role_all) == 3
 
@@ -54,5 +54,5 @@ async def test_seed_all_tenants(test_tenant):
     # Check if the tenant still has its data
     session = await get_tenant_session(test_tenant.id)
     async with session:
-        roles = await session.execute(select(TenantRole))
-        assert len(roles.scalars().all()) == 3
+        roles = await session.exec(select(TenantRole))
+        assert len(roles.all()) == 3

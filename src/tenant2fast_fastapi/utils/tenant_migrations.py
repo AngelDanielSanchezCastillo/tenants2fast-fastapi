@@ -4,7 +4,7 @@ Tenant Migration Utilities
 Utilities for managing tenant database schemas and migrations.
 """
 
-from sqlalchemy.ext.asyncio import AsyncSession
+from sqlmodel.ext.asyncio.session import AsyncSession
 from ..databases.tenant_db_factory import get_tenant_engine, tenant_metadata
 
 
@@ -64,14 +64,14 @@ async def run_all_tenant_migrations():
     Run migrations on all active tenant databases.
     Useful when you add new models/fields.
     """
-    from sqlalchemy import select
+    from sqlmodel import select
     from pgsqlasync2fast_fastapi.connection import get_manager
     auth_engine = get_manager().get_engine("auth")
     from tenant2fast_fastapi.models.tenant_model import Tenant
     
     async with AsyncSession(auth_engine) as session:
-        result = await session.execute(select(Tenant).where(Tenant.is_active == True))  # noqa: E712
-        tenants = result.scalars().all()
+        result = await session.exec(select(Tenant).where(Tenant.is_active == True))  # noqa: E712
+        tenants = result.all()
 
         for tenant in tenants:
             try:
@@ -87,7 +87,7 @@ async def seed_all_tenants():
     Run the RBAC seeder on all active tenant databases.
     Ensures roles and permissions are up to date across the entire platform.
     """
-    from sqlalchemy import select
+    from sqlmodel import select
     from pgsqlasync2fast_fastapi.connection import get_manager
     auth_engine = get_manager().get_engine("auth")
     
@@ -95,8 +95,8 @@ async def seed_all_tenants():
     from ..services.tenant_rbac_seeder import seed_tenant_rbac
 
     async with AsyncSession(auth_engine) as session:
-        result = await session.execute(select(Tenant).where(Tenant.is_active == True))  # noqa: E712
-        tenants = result.scalars().all()
+        result = await session.exec(select(Tenant).where(Tenant.is_active == True))  # noqa: E712
+        tenants = result.all()
 
         for tenant in tenants:
             try:

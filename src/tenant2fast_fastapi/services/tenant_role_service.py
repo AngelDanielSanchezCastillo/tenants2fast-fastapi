@@ -1,5 +1,5 @@
 from typing import List, Optional, Any
-from sqlalchemy.ext.asyncio import AsyncSession
+from sqlmodel.ext.asyncio.session import AsyncSession
 from sqlmodel import select
 
 from rbac2fast_core.protocols.models import RoleProtocol, UserRoleProtocol, PermissionAssignmentProtocol
@@ -26,15 +26,15 @@ class TenantRoleService(RoleServiceProtocol):
 
     async def get_role(self, role_id: int, session: AsyncSession) -> Optional[TenantRole]:
         """Get role by ID."""
-        result = await session.execute(select(TenantRole).where(TenantRole.id == role_id))
-        return result.scalar_one_or_none()
+        result = await session.exec(select(TenantRole).where(TenantRole.id == role_id))
+        return result.one_or_none()
 
     async def list_roles(
         self, session: AsyncSession, skip: int = 0, limit: int = 100
     ) -> List[TenantRole]:
         """List all roles in the tenant."""
-        result = await session.execute(select(TenantRole).offset(skip).limit(limit))
-        return list(result.scalars().all())
+        result = await session.exec(select(TenantRole).offset(skip).limit(limit))
+        return list(result.all())
 
     async def update_role(
         self, role_id: int, role_data: Any, session: AsyncSession
@@ -77,24 +77,22 @@ class TenantRoleService(RoleServiceProtocol):
         self, role_id: int, session: AsyncSession
     ) -> List[TenantPermission]:
         """List all permissions assigned to a role."""
-        result = await session.execute(
-            select(TenantPermission)
+        result = await session.exec(select(TenantPermission)
             .join(TenantRolePermission)
             .where(TenantRolePermission.role_id == role_id)
         )
-        return list(result.scalars().all())
+        return list(result.all())
 
     async def delete_role_permission(
         self, role_id: int, permission_id: int, session: AsyncSession
     ) -> bool:
         """Remove a permission from a role."""
-        result = await session.execute(
-            select(TenantRolePermission).where(
+        result = await session.exec(select(TenantRolePermission).where(
                 TenantRolePermission.role_id == role_id,
                 TenantRolePermission.permission_id == permission_id
             )
         )
-        assignment = result.scalar_one_or_none()
+        assignment = result.one_or_none()
         if not assignment:
             return False
             
@@ -116,24 +114,22 @@ class TenantRoleService(RoleServiceProtocol):
         self, user_id: int, session: AsyncSession
     ) -> List[TenantRole]:
         """List all roles assigned to a tenant user."""
-        result = await session.execute(
-            select(TenantRole)
+        result = await session.exec(select(TenantRole)
             .join(TenantUserRole)
             .where(TenantUserRole.user_id == user_id)
         )
-        return list(result.scalars().all())
+        return list(result.all())
 
     async def remove_user_role(
         self, user_id: int, role_id: int, session: AsyncSession
     ) -> bool:
         """Remove a role from a tenant user."""
-        result = await session.execute(
-            select(TenantUserRole).where(
+        result = await session.exec(select(TenantUserRole).where(
                 TenantUserRole.user_id == user_id,
                 TenantUserRole.role_id == role_id
             )
         )
-        assignment = result.scalar_one_or_none()
+        assignment = result.one_or_none()
         if not assignment:
             return False
             

@@ -4,7 +4,7 @@ test_tenant_base_model.py – tests for custom models and tenant-specific tables
 
 import pytest
 from sqlalchemy import inspect
-from sqlmodel import Field
+from sqlmodel import Field, select
 from tenant2fast_fastapi.models.bases import TenantBaseModel
 from tenant2fast_fastapi.databases.tenant_db_factory import (
     initialize_tenant_schema,
@@ -59,8 +59,8 @@ async def test_custom_model_crud(test_tenant):
         await session.refresh(product)
         assert product.id is not None
 
-        # Read
-        result = await session.execute(Product.__table__.select().where(Product.id == product.id))
-        row = result.fetchone()
-        assert row is not None
-        assert row.name == "Tenant Laptop"
+        # Read using SQLModel standard async API
+        result = await session.exec(select(Product).where(Product.id == product.id))
+        fetched_product = result.one_or_none()
+        assert fetched_product is not None
+        assert fetched_product.name == "Tenant Laptop"

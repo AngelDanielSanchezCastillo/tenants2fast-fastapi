@@ -5,7 +5,7 @@ Requires a running PostgreSQL instance configured via .env.
 """
 
 import pytest
-from sqlalchemy.ext.asyncio import AsyncSession
+from sqlmodel.ext.asyncio.session import AsyncSession
 from sqlmodel import select
 
 from tenant2fast_fastapi.models.tenant_model import Tenant
@@ -67,10 +67,9 @@ async def test_query_tenants_for_user(session: AsyncSession, test_user, test_ten
     session.add(user_tenant)
     await session.commit()
 
-    result = await session.execute(
-        select(UserTenant).where(UserTenant.user_id == test_user.id)
+    result = await session.exec(select(UserTenant).where(UserTenant.user_id == test_user.id)
     )
-    rows = result.scalars().all()
+    rows = result.all()
     assert len(rows) == 1
     assert rows[0].tenant_id == test_tenant.id
 

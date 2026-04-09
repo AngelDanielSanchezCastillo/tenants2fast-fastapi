@@ -1,6 +1,6 @@
 import re
 from typing import List, Optional, Any
-from sqlalchemy.ext.asyncio import AsyncSession
+from sqlmodel.ext.asyncio.session import AsyncSession
 from sqlmodel import select
 
 from rbac2fast_core.protocols.services import AccessServiceProtocol
@@ -34,10 +34,9 @@ class TenantAccessService(AccessServiceProtocol):
         4. deny por defecto
         """
         # 1. Get TenantUser ID
-        result = await session.execute(
-            select(TenantUser.id).where(TenantUser.auth_user_id == auth_user_id)
+        result = await session.exec(select(TenantUser.id).where(TenantUser.auth_user_id == auth_user_id)
         )
-        tenant_user_id = result.scalar_one_or_none()
+        tenant_user_id = result.one_or_none()
         if not tenant_user_id:
             return False
 
@@ -53,8 +52,7 @@ class TenantAccessService(AccessServiceProtocol):
         Returns a list of permission objects with their associated routes.
         """
         # 1. Direct overrides (UserPermission)
-        result = await session.execute(
-            select(TenantPermission, TenantUserPermission.is_allowed)
+        result = await session.exec(select(TenantPermission, TenantUserPermission.is_allowed)
             .join(TenantUserPermission)
             .where(TenantUserPermission.user_id == tenant_user_id)
         )
@@ -69,14 +67,13 @@ class TenantAccessService(AccessServiceProtocol):
             })
 
         # 2. Role permissions
-        result = await session.execute(
-            select(TenantPermission)
+        result = await session.exec(select(TenantPermission)
             .join(TenantRolePermission)
             .join(TenantUserRole, TenantRolePermission.role_id == TenantUserRole.role_id)
             .where(TenantUserRole.user_id == tenant_user_id)
         )
         role_perms = []
-        for perm in result.scalars().all():
+        for perm in result.all():
             routes = await self._get_permission_routes(perm.id, session)
             role_perms.append({
                 "id": perm.id,
@@ -90,13 +87,12 @@ class TenantAccessService(AccessServiceProtocol):
 
     async def _get_permission_routes(self, permission_id: int, session: AsyncSession) -> List[dict]:
         """Internal helper to get routes for a permission."""
-        result = await session.execute(
-            select(TenantRoute)
+        result = await session.exec(select(TenantRoute)
             .join(TenantPermissionRoute)
             .where(TenantPermissionRoute.permission_id == permission_id)
         )
         return [
-            {"path": r.path, "method": r.method} for r in result.scalars().all()
+            {"path": r.path, "method": r.method} for r in result.all()
         ]
 
     def evaluate_route_access(self, resolved_permissions: List[dict], route_path: str, method: str) -> bool:

@@ -1,5 +1,5 @@
 from typing import List, Optional, Any
-from sqlalchemy.ext.asyncio import AsyncSession
+from sqlmodel.ext.asyncio.session import AsyncSession
 from sqlmodel import select
 
 from rbac2fast_core.protocols.models import (
@@ -35,8 +35,8 @@ class TenantPermissionService(PermissionServiceProtocol):
         self, session: AsyncSession, skip: int = 0, limit: int = 100
     ) -> List[TenantPermissionCategory]:
         """List all permission categories."""
-        result = await session.execute(select(TenantPermissionCategory).offset(skip).limit(limit))
-        return list(result.scalars().all())
+        result = await session.exec(select(TenantPermissionCategory).offset(skip).limit(limit))
+        return list(result.all())
 
     async def create_permission(
         self, permission_data: Any, session: AsyncSession
@@ -52,15 +52,15 @@ class TenantPermissionService(PermissionServiceProtocol):
         self, permission_id: int, session: AsyncSession
     ) -> Optional[TenantPermission]:
         """Get permission by ID."""
-        result = await session.execute(select(TenantPermission).where(TenantPermission.id == permission_id))
-        return result.scalar_one_or_none()
+        result = await session.exec(select(TenantPermission).where(TenantPermission.id == permission_id))
+        return result.one_or_none()
 
     async def list_permissions(
         self, session: AsyncSession, skip: int = 0, limit: int = 100
     ) -> List[TenantPermission]:
         """List all permissions in the tenant."""
-        result = await session.execute(select(TenantPermission).offset(skip).limit(limit))
-        return list(result.scalars().all())
+        result = await session.exec(select(TenantPermission).offset(skip).limit(limit))
+        return list(result.all())
 
     async def update_permission(
         self, permission_id: int, permission_data: Any, session: AsyncSession
@@ -115,24 +115,22 @@ class TenantPermissionService(PermissionServiceProtocol):
         self, user_id: int, session: AsyncSession
     ) -> List[TenantPermission]:
         """List all permissions directly assigned to a tenant user."""
-        result = await session.execute(
-            select(TenantPermission)
+        result = await session.exec(select(TenantPermission)
             .join(TenantUserPermission)
             .where(TenantUserPermission.user_id == user_id)
         )
-        return list(result.scalars().all())
+        return list(result.all())
 
     async def remove_user_permission(
         self, user_id: int, permission_id: int, session: AsyncSession
     ) -> bool:
         """Remove a direct permission assignment from a tenant user."""
-        result = await session.execute(
-            select(TenantUserPermission).where(
+        result = await session.exec(select(TenantUserPermission).where(
                 TenantUserPermission.user_id == user_id,
                 TenantUserPermission.permission_id == permission_id
             )
         )
-        assignment = result.scalar_one_or_none()
+        assignment = result.one_or_none()
         if not assignment:
             return False
             
