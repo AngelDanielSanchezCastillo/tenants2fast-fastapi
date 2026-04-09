@@ -1,17 +1,14 @@
 from datetime import datetime
 
-from sqlmodel import BigInteger, Column, Field, SQLModel
+from sqlmodel import Field, SQLModel
 
 from oauth2fast_fastapi.models.bases import AuthModel
 
 
-# Tenant2 model - stores information about each client/organization
+# Tenant model - stores information about each client/organization
 class Tenant(AuthModel, table=True):
     __tablename__ = "tenants"
 
-    id: int = Field(
-        default=None, sa_column=Column(BigInteger, index=True, primary_key=True)
-    )
     name: str = Field(index=True)  # Company/client name
     slug: str = Field(unique=True, index=True)  # URL-friendly identifier
     database_name: str = Field(unique=True, index=True)  # Name of the tenant's database

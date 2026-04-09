@@ -11,9 +11,6 @@ class UserTenant(AuthModel, table=True):
 
     __tablename__ = "user_tenants"
 
-    id: int = Field(
-        default=None, sa_column=Column(BigInteger, index=True, primary_key=True)
-    )
     user_id: int = Field(
         sa_column=Column(BigInteger, ForeignKey("users.id", ondelete="CASCADE"))
     )
