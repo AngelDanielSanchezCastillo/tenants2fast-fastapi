@@ -12,7 +12,7 @@ from ..services.tenant_role_service import tenant_role_service
 from ..databases.tenant_db_factory import get_tenant_session
 
 
-router = APIRouter(prefix="/roles", tags=["Tenant Roles"])
+router = APIRouter(prefix="/tenant/roles", tags=["Tenant Roles"])
 
 @router.post(
     "/",

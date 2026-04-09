@@ -11,7 +11,7 @@ from ..services.tenant_permission_service import tenant_permission_service
 from ..databases.tenant_db_factory import get_tenant_session
 
 
-router = APIRouter(prefix="/permissions", tags=["Tenant Permissions"])
+router = APIRouter(prefix="/tenant/permissions", tags=["Tenant Permissions"])
 
 
 @router.get(

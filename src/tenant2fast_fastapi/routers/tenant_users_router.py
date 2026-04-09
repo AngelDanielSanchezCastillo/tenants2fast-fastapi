@@ -16,7 +16,7 @@ from ..services import tenant_user_service
 from ..databases.tenant_db_factory import get_tenant_session
 
 
-router = APIRouter(prefix="/users", tags=["Tenant Users"])
+router = APIRouter(prefix="/tenant/users", tags=["Tenant Users"])
 
 
 @router.post(
