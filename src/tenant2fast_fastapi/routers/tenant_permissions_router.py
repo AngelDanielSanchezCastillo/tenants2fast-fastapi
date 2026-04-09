@@ -7,14 +7,24 @@ from ..schemas.rbac.permission_schema import (
     TenantPermissionRead,
     TenantPermissionCategoryRead
 )
+from ..settings import settings
 from ..services.tenant_permission_service import tenant_permission_service
 from ..databases.tenant_db_factory import get_tenant_session
 
 
-router = APIRouter(prefix="/tenant/permissions", tags=["Tenant Permissions"])
+
+# Ensure prefix starts with "/"
+prefix = settings.url_prefix.get_secret_value()
+if not prefix.startswith("/"):
+    prefix = f"/{prefix}"
+
+tenant_permissions_router = APIRouter(
+    prefix=prefix+"/permissions",
+    tags=["Tenants Permissions"],
+)
 
 
-@router.get(
+@tenant_permissions_router.get(
     "/",
     response_model=list[TenantPermissionRead],
     dependencies=[Depends(has_tenant_permission("/permissions", "GET"))]
@@ -27,7 +37,7 @@ async def list_permissions(
         return await tenant_permission_service.list_permissions(session)
 
 
-@router.get(
+@tenant_permissions_router.get(
     "/categories",
     # response_model=list[TenantPermissionCategoryRead],
     dependencies=[Depends(has_tenant_permission("/permissions/categories", "GET"))]
@@ -40,7 +50,7 @@ async def list_categories(
         return await tenant_permission_service.list_categories(session)
 
 
-@router.get(
+@tenant_permissions_router.get(
     "/{permission_id}",
     response_model=TenantPermissionRead,
     dependencies=[Depends(has_tenant_permission("/permissions/{permission_id}", "GET"))]

@@ -12,14 +12,23 @@ from ..schemas.rbac.user_schema import (
     TenantUserCreate,
     TenantUserUpdate
 )
+from ..settings import settings
 from ..services import tenant_user_service
 from ..databases.tenant_db_factory import get_tenant_session
 
 
-router = APIRouter(prefix="/tenant/users", tags=["Tenant Users"])
+# Ensure prefix starts with "/"
+prefix = settings.url_prefix.get_secret_value()
+if not prefix.startswith("/"):
+    prefix = f"/{prefix}"
+
+tenant_users_router = APIRouter(
+    prefix=prefix+"/users",
+    tags=["Tenants Users"],
+)
 
 
-@router.post(
+@tenant_users_router.post(
     "/",
     response_model=TenantUserRead,
     status_code=status.HTTP_201_CREATED,
@@ -34,7 +43,7 @@ async def add_user(
         return await tenant_user_service.add_user_to_tenant(user_data, session)
 
 
-@router.get(
+@tenant_users_router.get(
     "/",
     response_model=list[TenantUserRead],
     dependencies=[Depends(has_tenant_permission("/users", "GET"))]
@@ -49,7 +58,7 @@ async def list_users(
         return await tenant_user_service.list_tenant_users(session, skip, limit)
 
 
-@router.get(
+@tenant_users_router.get(
     "/me",
     response_model=TenantUserRead
 )
@@ -60,7 +69,7 @@ async def get_me(
     return current_user
 
 
-@router.get(
+@tenant_users_router.get(
     "/{user_id}",
     response_model=TenantUserRead,
     dependencies=[Depends(has_tenant_permission("/users/{user_id}", "GET"))]
@@ -77,7 +86,7 @@ async def get_user(
         return user
 
 
-@router.patch(
+@tenant_users_router.patch(
     "/{user_id}",
     response_model=TenantUserRead,
     dependencies=[Depends(has_tenant_permission("/users/{user_id}", "PATCH"))]
@@ -92,7 +101,7 @@ async def update_user(
         return await tenant_user_service.update_tenant_user(user_id, user_data, session)
 
 
-@router.delete(
+@tenant_users_router.delete(
     "/{user_id}",
     status_code=status.HTTP_204_NO_CONTENT,
     dependencies=[Depends(has_tenant_permission("/users/{user_id}", "DELETE"))]

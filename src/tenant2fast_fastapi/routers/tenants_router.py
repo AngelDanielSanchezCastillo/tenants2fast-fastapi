@@ -8,13 +8,21 @@ from typing import Annotated
 
 from fastapi import APIRouter, HTTPException, Query, status
 
+from ..settings import settings
 from ..schemas.tenant_schema import TenantCreate, TenantList, TenantRead, TenantUpdate
 from ..services import tenant_service
 
-router = APIRouter(prefix="/tenants", tags=["Tenants"])
+# Ensure prefix starts with "/"
+prefix = settings.url_prefix.get_secret_value()
+if not prefix.startswith("/"):
+    prefix = f"/{prefix}"
 
+tenants_router = APIRouter(
+    prefix=prefix,
+    tags=[prefix.strip("/").capitalize()],
+)
 
-@router.post(
+@tenants_router.post(
     "",
     # response_model=TenantRead,
     status_code=status.HTTP_201_CREATED,
@@ -35,7 +43,7 @@ async def create_tenant(tenant_data: TenantCreate):
     return tenant
 
 
-@router.get(
+@tenants_router.get(
     "/{tenant_id}",
     # response_model=TenantRead,
     summary="Get tenant by ID",
@@ -54,7 +62,7 @@ async def get_current_tenant(tenant_id: int):
     return tenant
 
 
-@router.get(
+@tenants_router.get(
     "/slug/{slug}",
     # response_model=TenantRead,
     summary="Get tenant by slug",
@@ -73,7 +81,7 @@ async def get_tenant_by_slug(slug: str):
     return tenant
 
 
-@router.get(
+@tenants_router.get(
     "",
     response_model=TenantList,
     summary="List all tenants",
@@ -92,7 +100,7 @@ async def list_tenants(
     )
 
 
-@router.put(
+@tenants_router.put(
     "/{tenant_id}",
     # response_model=TenantRead,
     summary="Update tenant",
@@ -105,7 +113,7 @@ async def update_tenant(tenant_id: int, tenant_data: TenantUpdate):
 
 
 
-@router.delete(
+@tenants_router.delete(
     "/{tenant_id}",
     status_code=status.HTTP_204_NO_CONTENT,
     summary="Deactivate tenant",
@@ -116,7 +124,7 @@ async def deactivate_tenant(tenant_id: int):
     await tenant_service.deactivate_tenant(tenant_id)
 
 
-@router.delete(
+@tenants_router.delete(
     "/{tenant_id}/permanent",
     status_code=status.HTTP_204_NO_CONTENT,
     summary="Permanently delete tenant",

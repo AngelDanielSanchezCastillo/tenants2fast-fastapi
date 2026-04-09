@@ -8,13 +8,23 @@ from ..schemas.rbac.role_schema import (
     TenantRoleCreate,
     TenantRoleUpdate
 )
+from ..settings import settings
 from ..services.tenant_role_service import tenant_role_service
 from ..databases.tenant_db_factory import get_tenant_session
 
 
-router = APIRouter(prefix="/tenant/roles", tags=["Tenant Roles"])
+# Ensure prefix starts with "/"
+prefix = settings.url_prefix.get_secret_value()
+if not prefix.startswith("/"):
+    prefix = f"/{prefix}"
 
-@router.post(
+tenant_roles_router = APIRouter(
+    prefix=prefix+"/roles",
+    tags=["Tenants Roles"],
+)
+
+
+@tenant_roles_router.post(
     "/",
     response_model=TenantRoleRead,
     status_code=status.HTTP_201_CREATED,
@@ -29,7 +39,7 @@ async def create_role(
         return await tenant_role_service.create_role(role_data, session)
 
 
-@router.get(
+@tenant_roles_router.get(
     "/",
     response_model=list[TenantRoleRead],
     dependencies=[Depends(has_tenant_permission("/roles", "GET"))]
@@ -44,7 +54,7 @@ async def list_roles(
         return await tenant_role_service.list_roles(session, skip, limit)
 
 
-@router.get(
+@tenant_roles_router.get(
     "/{role_id}",
     response_model=TenantRoleRead,
     dependencies=[Depends(has_tenant_permission("/roles/{role_id}", "GET"))]
@@ -61,7 +71,7 @@ async def get_role(
         return role
 
 
-@router.patch(
+@tenant_roles_router.patch(
     "/{role_id}",
     response_model=TenantRoleRead,
     dependencies=[Depends(has_tenant_permission("/roles/{role_id}", "PATCH"))]
@@ -76,7 +86,7 @@ async def update_role(
         return await tenant_role_service.update_role(role_id, role_data, session)
 
 
-@router.delete(
+@tenant_roles_router.delete(
     "/{role_id}",
     status_code=status.HTTP_204_NO_CONTENT,
     dependencies=[Depends(has_tenant_permission("/roles/{role_id}", "DELETE"))]

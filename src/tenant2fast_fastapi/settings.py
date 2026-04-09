@@ -27,6 +27,9 @@ class TenantSettings(BaseSettings):
     
     # Database prefix for tenant databases
     db_prefix: str = "tenant_"
+
+    # URL prefix for tenant management endpoints
+    url_prefix: SecretStr = SecretStr("tenants")
     
     # pgsqlasync2fast-fastapi connection settings (used for tenant database management)
     base_db_connection: SecretStr = SecretStr("tenant")
