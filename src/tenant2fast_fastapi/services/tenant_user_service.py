@@ -3,6 +3,7 @@ from sqlmodel.ext.asyncio.session import AsyncSession
 from sqlmodel import select
 
 from oauth2fast_fastapi import get_auth_session
+from pgsqlasync2fast_fastapi.connection import get_manager
 from oauth2fast_fastapi.models.user_model import User as AuthUser
 from ..models.tenant_user_model import TenantUser
 from ..models.user_tenant_model import UserTenant
@@ -19,8 +20,7 @@ async def add_user_to_tenant(
     2. Creates a TenantUser record in the tenant's database.
     3. Creates a UserTenant mapping in the Auth database (membership).
     """
-    auth_session = get_auth_session()
-    async with auth_session:
+    async with await get_manager().get_session("auth") as auth_session:
         # 1. Validate user exists in Auth
         result = await auth_session.exec(select(AuthUser).where(AuthUser.id == user_data.auth_user_id)
         )
@@ -126,8 +126,7 @@ async def remove_user_from_tenant(
         await tenant_session.commit()
         
     # 2. Delete from Auth DB
-    auth_session = get_auth_session()
-    async with auth_session:
+    async with await get_manager().get_session("auth") as auth_session:
         result = await auth_session.exec(select(UserTenant).where(
                 UserTenant.tenant_id == tenant_id,
                 UserTenant.user_id == auth_user_id
