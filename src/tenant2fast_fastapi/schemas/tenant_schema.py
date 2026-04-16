@@ -6,7 +6,7 @@ Pydantic schemas for tenant API operations.
 
 from datetime import datetime
 
-from pydantic import BaseModel, Field, field_validator
+from pydantic import BaseModel, Field, field_validator, ConfigDict
 
 
 class TenantCreate(BaseModel):
@@ -53,6 +53,8 @@ class TenantRead(BaseModel):
     max_users: int | None = None
     created_at: datetime
     updated_at: datetime
+
+    model_config = ConfigDict(from_attributes=True)
 
 
 

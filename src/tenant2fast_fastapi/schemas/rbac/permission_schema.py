@@ -1,3 +1,4 @@
+from pydantic import ConfigDict
 from rbac2fast_core.schemas import (
     PermissionCategoryCreate,
     PermissionCategoryRead,
@@ -16,6 +17,8 @@ class TenantPermissionCategoryRead(PermissionCategoryRead):
     """Schema to read a tenant permission category."""
     pass
 
+    model_config = ConfigDict(from_attributes=True)
+
 
 class TenantPermissionCreate(PermissionCreate):
     """Schema to create a tenant permission."""
@@ -25,6 +28,8 @@ class TenantPermissionCreate(PermissionCreate):
 class TenantPermissionRead(PermissionRead):
     """Schema to read a tenant permission."""
     pass
+
+    model_config = ConfigDict(from_attributes=True)
 
 
 class TenantPermissionUpdate(PermissionUpdate):
