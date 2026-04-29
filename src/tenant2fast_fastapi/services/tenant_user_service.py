@@ -49,8 +49,7 @@ async def add_user_to_tenant(
             auth_user_id=user_data.auth_user_id,
             position=user_data.position,
             department=user_data.department,
-            internal_email=user_data.internal_email,
-            notes=user_data.notes,
+            is_admin=user_data.is_admin,
         )
         tenant_session.add(tenant_user)
         await tenant_session.commit()
@@ -99,11 +98,14 @@ async def update_tenant_user(
             status_code=status.HTTP_404_NOT_FOUND,
             detail=f"Tenant user {user_id} not found"
         )
-        
+
+    # Only update fields that exist in TenantUser model
     update_data = user_data.model_dump(exclude_unset=True)
+    valid_fields = {'position', 'department', 'is_admin', 'is_active'}
     for key, value in update_data.items():
-        setattr(tenant_user, key, value)
-        
+        if key in valid_fields:
+            setattr(tenant_user, key, value)
+
     session.add(tenant_user)
     await session.commit()
     await session.refresh(tenant_user)

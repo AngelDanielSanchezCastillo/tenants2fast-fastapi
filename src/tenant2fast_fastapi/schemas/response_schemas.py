@@ -73,9 +73,8 @@ class TenantUserResponse(BaseModel):
     auth_user_id: int
     position: str | None = None
     department: str | None = None
-    internal_email: str | None = None
-    notes: str | None = None
-    is_active_in_tenant: bool = True
+    is_admin: bool = False
+    is_active: bool = True
     created_at: datetime
     updated_at: datetime
 
