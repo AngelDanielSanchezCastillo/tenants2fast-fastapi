@@ -20,6 +20,7 @@ from ..schemas.response_schemas import (
     TenantUserSingleResponse,
     TenantUserResponse,
     TenantUserErrorResponse,
+    DeleteSuccessResponse,
     NoContentResponse,
 )
 from ..settings import settings
@@ -185,14 +186,14 @@ async def update_user(
 
 @tenant_users_router.delete(
     "/{user_id}",
-    response_model=NoContentResponse,
-    status_code=status.HTTP_204_NO_CONTENT,
+    response_model=DeleteSuccessResponse,
     dependencies=[Depends(has_tenant_permission("/users/{user_id}", "DELETE"))]
 )
 async def remove_user(
     user_id: int,
     tenant: Tenant = Depends(get_current_tenant)
-) -> None:
+) -> DeleteSuccessResponse:
     """Remove a user from the tenant."""
     async with await get_tenant_session(tenant.id) as session:
         await tenant_user_service.remove_user_from_tenant(user_id, session)
+    return DeleteSuccessResponse()

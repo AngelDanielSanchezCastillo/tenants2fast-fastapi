@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "tenants2fast-fastapi"
-version = "0.3.0"
+version = "0.3.1"
 description = "Multi-tenancy management module for FastAPI with tenant isolation and permission-aware middleware"
 readme = "README.md"
 requires-python = ">=3.10"

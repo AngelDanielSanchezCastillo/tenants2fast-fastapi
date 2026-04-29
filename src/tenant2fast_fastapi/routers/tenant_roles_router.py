@@ -17,6 +17,7 @@ from ..schemas.response_schemas import (
     TenantRoleSingleResponse,
     TenantRoleResponse,
     TenantRoleErrorResponse,
+    DeleteSuccessResponse,
     NoContentResponse,
 )
 from ..settings import settings
@@ -147,14 +148,14 @@ async def update_role(
 
 @tenant_roles_router.delete(
     "/{role_id}",
-    response_model=NoContentResponse,
-    status_code=status.HTTP_204_NO_CONTENT,
+    response_model=DeleteSuccessResponse,
     dependencies=[Depends(has_tenant_permission("/roles/{role_id}", "DELETE"))]
 )
 async def delete_role(
     role_id: int,
     tenant: Tenant = Depends(get_current_tenant)
-) -> None:
+) -> DeleteSuccessResponse:
     """Delete a role from the tenant."""
     async with await get_tenant_session(tenant.id) as session:
         await tenant_role_service.delete_role(role_id, session)
+    return DeleteSuccessResponse()

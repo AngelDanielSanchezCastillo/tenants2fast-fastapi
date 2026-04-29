@@ -194,23 +194,21 @@ async def update_tenant(tenant_id: int, tenant_data: TenantUpdate) -> TenantSing
 
 @tenants_router.delete(
     "/{tenant_id}",
-    response_model=NoContentResponse,
-    status_code=status.HTTP_204_NO_CONTENT,
+    response_model=DeleteSuccessResponse,
     summary="Deactivate tenant",
     description="Deactivate a tenant (soft delete). Tenant can be reactivated later.",
 )
-async def deactivate_tenant(tenant_id: int) -> None:
+async def deactivate_tenant(tenant_id: int) -> DeleteSuccessResponse:
     """Deactivate a tenant (soft delete)."""
     await tenant_service.deactivate_tenant(tenant_id)
+    return DeleteSuccessResponse()
 
 
 @tenants_router.delete(
     "/{tenant_id}/permanent",
-    response_model=NoContentResponse,
-    status_code=status.HTTP_204_NO_CONTENT,
+    response_model=None,
     summary="Permanently delete tenant",
     description="⚠️ DANGER: Permanently delete tenant and their database. This cannot be undone!",
-    responses={400: {"model": DeleteErrorResponse}},
 )
 async def delete_tenant_permanently(
     tenant_id: int, confirm: Annotated[bool, Query()] = False
