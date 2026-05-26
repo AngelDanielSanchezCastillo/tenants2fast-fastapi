@@ -1,0 +1,12 @@
+[
+  {
+    "id": 1,
+    "name": "System",
+    "description": "System-level permissions"
+  },
+  {
+    "id": 2,
+    "name": "Users",
+    "description": "User management permissions"
+  }
+]

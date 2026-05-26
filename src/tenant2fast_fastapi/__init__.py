@@ -27,6 +27,20 @@ from .dependencies import (
     get_tenant_db_session,
 )
 
+# Tenant seeders do NOT use register_seeder() because:
+# 1. They don't seed the auth connection directly
+# 2. They seed dynamic tenant_N connections
+# 3. seed_all_tenants() handles the iteration over all tenants
+# Instead, tenants2fast-fastapi exposes seed_all_tenants() for explicit calling
+# after tenant creation or for bulk re-seeding
+
+from .services.tenant_rbac_seeder import (
+    seed,
+    seed_all_tenants,
+    get_seeder_config,
+    seed_tenant_rbac,
+)
+
 __all__ = [
     "__version__",
     "Tenant",
@@ -46,4 +60,9 @@ __all__ = [
     "create_tenant_database",
     "get_tenant_engine",
     "initialize_tenant_schema",
+    # Seeder system
+    "get_seeder_config",
+    "seed",
+    "seed_all_tenants",
+    "seed_tenant_rbac",
 ]

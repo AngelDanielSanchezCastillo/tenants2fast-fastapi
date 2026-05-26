@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "tenants2fast-fastapi"
-version = "0.3.2"
+version = "0.4.0"
 description = "Multi-tenancy management module for FastAPI with tenant isolation and permission-aware middleware"
 readme = "README.md"
 requires-python = ">=3.10"
@@ -29,7 +29,7 @@ classifiers = [
 dependencies = [
     # Pulls in pgsqlasync2fast-fastapi, mailing2fast-fastapi,
     # log2fast-fastapi, sqlmodel, fastapi, pydantic, etc. transitively.
-    "permissions2fast-fastapi>=0.6.0",
+    "permissions2fast-fastapi>=0.7.0",
 ]
 
 [dependency-groups]
@@ -61,6 +61,13 @@ package-dir = {"" = "src"}
 [tool.setuptools.packages.find]
 where = ["src"]
 include = ["tenant2fast_fastapi*"]
+
+[tool.setuptools.package-data]
+tenant2fast_fastapi = [
+    "seeders/manifest.json",
+    "seeders/dev/*.json",
+    "seeders/prod/*.json",
+]
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]

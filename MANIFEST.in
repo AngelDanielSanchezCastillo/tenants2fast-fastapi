@@ -1,8 +1,10 @@
 include README.md
 include LICENSE
 recursive-include docs *.md *.example
-recursive-include examples *.py
+recursive-include examples *.py *.example
+recursive-include examples/tenant-seeder-usage *.py
 recursive-include src/tenant2fast_fastapi *.py *.html *.json
+recursive-include src/tenant2fast_fastapi/seeders *.json
 global-exclude __pycache__
 global-exclude *.py[co]
 global-exclude .DS_Store

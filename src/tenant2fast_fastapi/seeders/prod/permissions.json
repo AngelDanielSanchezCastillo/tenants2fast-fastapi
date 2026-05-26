@@ -1,0 +1,32 @@
+[
+  {
+    "id": 1,
+    "name": "view_tenant_info",
+    "description": "View tenant metadata",
+    "category_id": 1
+  },
+  {
+    "id": 2,
+    "name": "edit_tenant_info",
+    "description": "Modify tenant metadata",
+    "category_id": 1
+  },
+  {
+    "id": 3,
+    "name": "list_users",
+    "description": "List all users in the tenant",
+    "category_id": 2
+  },
+  {
+    "id": 4,
+    "name": "add_users",
+    "description": "Add new users to the tenant",
+    "category_id": 2
+  },
+  {
+    "id": 5,
+    "name": "manage_roles",
+    "description": "Assign or remove roles from users",
+    "category_id": 2
+  }
+]

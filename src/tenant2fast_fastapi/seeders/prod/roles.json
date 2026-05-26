@@ -1,0 +1,12 @@
+[
+  {
+    "id": 1,
+    "name": "Owner",
+    "description": "Full control over the tenant resources and users"
+  },
+  {
+    "id": 2,
+    "name": "Admin",
+    "description": "Administrative access to most tenant resources"
+  }
+]
