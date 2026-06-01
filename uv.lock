@@ -1324,15 +1324,15 @@ wheels = [
 
 [[package]]
 name = "permissions2fast-fastapi"
-version = "0.7.1"
+version = "0.8.0"
 source = { registry = "https://pypi.org/simple" }
 dependencies = [
     { name = "oauth2fast-fastapi" },
     { name = "rbac2fast-core" },
 ]
-sdist = { url = "https://files.pythonhosted.org/packages/58/6c/d0b0194cfa998965a5501c6508944feac94e7c44a098b04a9541c5ff373a/permissions2fast_fastapi-0.7.1.tar.gz", hash = "sha256:10a902b5e071b0ed93d2c4453690fb427dd24929ec3ddf1e657adb44277e4db4", size = 22316, upload-time = "2026-06-01T19:15:29.197Z" }
+sdist = { url = "https://files.pythonhosted.org/packages/c5/81/f4098503171220b4a99c1ddc64a990884573cbc506edf6d7bd2ba785c26e/permissions2fast_fastapi-0.8.0.tar.gz", hash = "sha256:b7e2a17d85c91fea3402cfc9a3f4c74ed497c6659977645b247bd8a8fd714ad9", size = 22761, upload-time = "2026-06-01T22:16:29.447Z" }
 wheels = [
-    { url = "https://files.pythonhosted.org/packages/01/2f/bb70d75c230443f6a6eda591adb458de30d2cc1377100c20c9bcbfde2e3e/permissions2fast_fastapi-0.7.1-py3-none-any.whl", hash = "sha256:dff1956a1d93f0801f5b7ef0ac84bc93e6ec2ce97a09ed853c9eee145901fc1d", size = 28934, upload-time = "2026-06-01T19:15:28.188Z" },
+    { url = "https://files.pythonhosted.org/packages/4f/7e/f590fa57b4ee9c44e37ee917d8e5dc4dbd6c22a67ee5fb9e7ae9ad065a88/permissions2fast_fastapi-0.8.0-py3-none-any.whl", hash = "sha256:692b2e7f3f146269ed4e432b01be3c3fb78ca696dbc1a5d8a932fa0aa2ca0946", size = 29152, upload-time = "2026-06-01T22:16:28.387Z" },
 ]
 
 [[package]]
@@ -2012,7 +2012,7 @@ wheels = [
 
 [[package]]
 name = "tenants2fast-fastapi"
-version = "0.4.1"
+version = "0.5.0"
 source = { editable = "." }
 dependencies = [
     { name = "permissions2fast-fastapi" },
@@ -2036,7 +2036,7 @@ test = [
 ]
 
 [package.metadata]
-requires-dist = [{ name = "permissions2fast-fastapi", specifier = ">=0.7.1" }]
+requires-dist = [{ name = "permissions2fast-fastapi", specifier = ">=0.8.0" }]
 
 [package.metadata.requires-dev]
 dev = [
