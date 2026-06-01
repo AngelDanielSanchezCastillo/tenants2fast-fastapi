@@ -65,10 +65,10 @@ class TenantUnexpectedErrorResponse(BaseModel):
     error: ErrorDetail | None = None
 
 
-# ============ Tenant User Responses ============
+# ============ User Responses ============
 
-class TenantUserResponse(BaseModel):
-    """Response for tenant user data."""
+class UserResponse(BaseModel):
+    """Response for user data."""
     id: int
     auth_user_id: int
     position: str | None = None
@@ -79,86 +79,86 @@ class TenantUserResponse(BaseModel):
     updated_at: datetime
 
 
-class TenantUserCreatedResponse(BaseModel):
-    """Successful tenant user creation response."""
+class UserCreatedResponse(BaseModel):
+    """Successful user creation response."""
     success: Literal[True] = True
     message: str = "Usuario añadido al tenant exitosamente"
-    user: TenantUserResponse
+    user: UserResponse
 
 
-class TenantUserListResponse(BaseModel):
-    """Successful tenant user list response."""
+class UserListResponse(BaseModel):
+    """Successful user list response."""
     success: Literal[True] = True
     message: str = "Éxito"
-    users: list[TenantUserResponse]
+    users: list[UserResponse]
     count: int
 
 
-class TenantUserSingleResponse(BaseModel):
-    """Successful single tenant user response."""
+class UserSingleResponse(BaseModel):
+    """Successful single user response."""
     success: Literal[True] = True
     message: str = "Éxito"
-    user: TenantUserResponse
+    user: UserResponse
 
 
-class TenantUserErrorResponse(BaseModel):
-    """Error response for tenant user operations."""
+class UserErrorResponse(BaseModel):
+    """Error response for user operations."""
     success: Literal[False] = False
     error_type: Literal["controlled"] = "controlled"
     message: str
     error: ErrorDetail | None = None
 
 
-# ============ Tenant Permission Responses ============
+# ============ Permission Responses ============
 
-class TenantPermissionResponse(BaseModel):
-    """Response for tenant permission data."""
+class PermissionResponse(BaseModel):
+    """Response for permission data."""
     id: int
     name: str
     permission_category_id: int
 
 
-class TenantPermissionListResponse(BaseModel):
-    """Successful tenant permission list response."""
+class PermissionListResponse(BaseModel):
+    """Successful permission list response."""
     success: Literal[True] = True
     message: str = "Éxito"
-    permissions: list[TenantPermissionResponse]
+    permissions: list[PermissionResponse]
     count: int
 
 
-class TenantPermissionSingleResponse(BaseModel):
-    """Successful single tenant permission response."""
+class PermissionSingleResponse(BaseModel):
+    """Successful single permission response."""
     success: Literal[True] = True
     message: str = "Éxito"
-    permission: TenantPermissionResponse
+    permission: PermissionResponse
 
 
-class TenantPermissionErrorResponse(BaseModel):
-    """Error response for tenant permission operations."""
+class PermissionErrorResponse(BaseModel):
+    """Error response for permission operations."""
     success: Literal[False] = False
     error_type: Literal["controlled"] = "controlled"
     message: str
     error: ErrorDetail | None = None
 
 
-class TenantPermissionCategoryResponse(BaseModel):
-    """Response for tenant permission category data."""
+class CategoryResponse(BaseModel):
+    """Response for permission category data."""
     id: int
     name: str
 
 
-class TenantPermissionCategoryListResponse(BaseModel):
-    """Successful tenant permission category list response."""
+class CategoryListResponse(BaseModel):
+    """Successful permission category list response."""
     success: Literal[True] = True
     message: str = "Éxito"
-    categories: list[TenantPermissionCategoryResponse]
+    categories: list[CategoryResponse]
     count: int
 
 
-# ============ Tenant Role Responses ============
+# ============ Role Responses ============
 
-class TenantRoleResponse(BaseModel):
-    """Response for tenant role data."""
+class RoleResponse(BaseModel):
+    """Response for role data."""
     id: int
     name: str
     description: str | None = None
@@ -167,30 +167,30 @@ class TenantRoleResponse(BaseModel):
     updated_at: datetime | None = None
 
 
-class TenantRoleCreatedResponse(BaseModel):
-    """Successful tenant role creation response."""
+class RoleCreatedResponse(BaseModel):
+    """Successful role creation response."""
     success: Literal[True] = True
     message: str = "Rol creado exitosamente"
-    role: TenantRoleResponse
+    role: RoleResponse
 
 
-class TenantRoleListResponse(BaseModel):
-    """Successful tenant role list response."""
+class RoleListResponse(BaseModel):
+    """Successful role list response."""
     success: Literal[True] = True
     message: str = "Éxito"
-    roles: list[TenantRoleResponse]
+    roles: list[RoleResponse]
     count: int
 
 
-class TenantRoleSingleResponse(BaseModel):
-    """Successful single tenant role response."""
+class RoleSingleResponse(BaseModel):
+    """Successful single role response."""
     success: Literal[True] = True
     message: str = "Éxito"
-    role: TenantRoleResponse
+    role: RoleResponse
 
 
-class TenantRoleErrorResponse(BaseModel):
-    """Error response for tenant role operations."""
+class RoleErrorResponse(BaseModel):
+    """Error response for role operations."""
     success: Literal[False] = False
     error_type: Literal["controlled"] = "controlled"
     message: str

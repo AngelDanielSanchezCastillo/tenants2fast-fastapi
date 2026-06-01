@@ -8,18 +8,19 @@ from ..dependencies import (
     has_tenant_permission,
     get_current_tenant_user
 )
-from ..models import Tenant, TenantUser
+from ..models import Tenant
+from ..models.user_model import User
 from ..schemas.rbac.user_schema import (
     TenantUserRead,
     TenantUserCreate,
     TenantUserUpdate
 )
 from ..schemas.response_schemas import (
-    TenantUserCreatedResponse,
-    TenantUserListResponse,
-    TenantUserSingleResponse,
-    TenantUserResponse,
-    TenantUserErrorResponse,
+    UserCreatedResponse,
+    UserListResponse,
+    UserSingleResponse,
+    UserResponse,
+    UserErrorResponse,
     DeleteSuccessResponse,
     NoContentResponse,
 )
@@ -41,19 +42,19 @@ tenant_users_router = APIRouter(
 
 @tenant_users_router.post(
     "/",
-    response_model=TenantUserCreatedResponse,
+    response_model=UserCreatedResponse,
     status_code=status.HTTP_201_CREATED,
     dependencies=[Depends(has_tenant_permission("/users", "POST"))]
 )
 async def add_user(
     user_data: TenantUserCreate,
     tenant: Tenant = Depends(get_current_tenant)
-) -> TenantUserCreatedResponse:
+) -> UserCreatedResponse:
     """Add a user to the current tenant."""
     async with await get_tenant_session(tenant.id) as session:
         user = await tenant_user_service.add_user_to_tenant(user_data, session)
-        return TenantUserCreatedResponse(
-            user=TenantUserResponse(
+        return UserCreatedResponse(
+            user=UserResponse(
                 id=user.id,
                 auth_user_id=user.auth_user_id,
                 position=user.position,
@@ -68,20 +69,20 @@ async def add_user(
 
 @tenant_users_router.get(
     "/",
-    response_model=TenantUserListResponse,
+    response_model=UserListResponse,
     dependencies=[Depends(has_tenant_permission("/users", "GET"))]
 )
 async def list_users(
     skip: int = 0,
     limit: int = 100,
     tenant: Tenant = Depends(get_current_tenant)
-) -> TenantUserListResponse:
+) -> UserListResponse:
     """List all users in the current tenant."""
     async with await get_tenant_session(tenant.id) as session:
         users = await tenant_user_service.list_tenant_users(session, skip, limit)
-        return TenantUserListResponse(
+        return UserListResponse(
             users=[
-                TenantUserResponse(
+                UserResponse(
                     id=u.id,
                     auth_user_id=u.auth_user_id,
                     position=u.position,
@@ -99,14 +100,14 @@ async def list_users(
 
 @tenant_users_router.get(
     "/me",
-    response_model=TenantUserSingleResponse
+    response_model=UserSingleResponse
 )
 async def get_me(
-    current_user: TenantUser = Depends(get_current_tenant_user)
-) -> TenantUserSingleResponse:
+    current_user: User = Depends(get_current_tenant_user)
+) -> UserSingleResponse:
     """Get the current user's record in the tenant context."""
-    return TenantUserSingleResponse(
-        user=TenantUserResponse(
+    return UserSingleResponse(
+        user=UserResponse(
             id=current_user.id,
             auth_user_id=current_user.auth_user_id,
             position=current_user.position,
@@ -121,14 +122,14 @@ async def get_me(
 
 @tenant_users_router.get(
     "/{user_id}",
-    response_model=TenantUserSingleResponse,
+    response_model=UserSingleResponse,
     dependencies=[Depends(has_tenant_permission("/users/{user_id}", "GET"))],
-    responses={404: {"model": TenantUserErrorResponse}},
+    responses={404: {"model": UserErrorResponse}},
 )
 async def get_user(
     user_id: int,
     tenant: Tenant = Depends(get_current_tenant)
-) -> JSONResponse | TenantUserSingleResponse:
+) -> JSONResponse | UserSingleResponse:
     """Get a specific user's record."""
     async with await get_tenant_session(tenant.id) as session:
         user = await tenant_user_service.get_tenant_user(user_id, session)
@@ -138,8 +139,8 @@ async def get_user(
                 status_code=404,
             )
             return JSONResponse(status_code=http_status, content=error_resp.model_dump())
-        return TenantUserSingleResponse(
-            user=TenantUserResponse(
+        return UserSingleResponse(
+            user=UserResponse(
                 id=user.id,
                 auth_user_id=user.auth_user_id,
                 position=user.position,
@@ -154,19 +155,19 @@ async def get_user(
 
 @tenant_users_router.patch(
     "/{user_id}",
-    response_model=TenantUserSingleResponse,
+    response_model=UserSingleResponse,
     dependencies=[Depends(has_tenant_permission("/users/{user_id}", "PATCH"))]
 )
 async def update_user(
     user_id: int,
     user_data: TenantUserUpdate,
     tenant: Tenant = Depends(get_current_tenant)
-) -> TenantUserSingleResponse:
+) -> UserSingleResponse:
     """Update a user's record or roles."""
     async with await get_tenant_session(tenant.id) as session:
         user = await tenant_user_service.update_tenant_user(user_id, user_data, session)
-        return TenantUserSingleResponse(
-            user=TenantUserResponse(
+        return UserSingleResponse(
+            user=UserResponse(
                 id=user.id,
                 auth_user_id=user.auth_user_id,
                 position=user.position,

@@ -30,9 +30,9 @@ from typing import Any, Dict
 from sqlmodel.ext.asyncio.session import AsyncSession
 from sqlmodel import select
 
-from ..models.role_model import TenantRole
-from ..models.permission_category_model import TenantPermissionCategory
-from ..models.permission_model import TenantPermission
+from ..models.role_model import Role
+from ..models.permission_category_model import Category
+from ..models.permission_model import Permission
 from ..databases.tenant_db_factory import get_tenant_session
 
 logger = logging.getLogger(__name__)
@@ -263,9 +263,9 @@ async def seed_all_tenants(profile: str) -> Dict[str, Any]:
 def _get_model_class(table_name: str):
     """Map table name to SQLModel class."""
     mapping = {
-        "categories": TenantPermissionCategory,
-        "roles": TenantRole,
-        "permissions": TenantPermission,
+        "categories": Category,
+        "roles": Role,
+        "permissions": Permission,
     }
     return mapping.get(table_name)
 

@@ -10,7 +10,7 @@ Part of the **\*2fast-fastapi** ecosystem: [oauth2fast-fastapi](https://github.c
 
 - 🔐 **JWT-aware `TenantMiddleware`** — extracts user from Bearer token and sets tenant context automatically on every request
 - 🏗️ **Isolated tenant databases** — each tenant gets its own PostgreSQL database, created and initialized at runtime
-- 🗂️ **`Tenant` and `UserTenant` SQLModel models** — ready-to-use ORM models with audit timestamps
+- 🗂️ **`Tenant` and `TenantUser` SQLModel models** — ready-to-use ORM models with audit timestamps
 - ⚡ **Redis caching** — tenant data and user permissions are cached via `permissions2fast-fastapi`
 - 🔒 **`require_permission` dependency** — guard any route with a single line using the RBAC system from `permissions2fast-fastapi`
 
@@ -83,7 +83,7 @@ In addition, all variables required by `oauth2fast-fastapi` (JWT, DB connections
 ```python
 from tenant2fast_fastapi import (
     Tenant,                   # SQLModel ORM model (table: tenants)
-    UserTenant,               # Many-to-many User ↔ Tenant (table: user_tenants)
+    TenantUser,               # Many-to-many User ↔ Tenant (table: tenant_users)
     TenantMiddleware,         # Starlette BaseHTTPMiddleware
     get_current_tenant,       # FastAPI dependency → Tenant
     get_current_user,         # FastAPI dependency → User (from oauth2fast-fastapi)
@@ -125,6 +125,31 @@ uv build
 | `mailing2fast-fastapi` | [![PyPI](https://img.shields.io/pypi/v/mailing2fast-fastapi)](https://pypi.org/project/mailing2fast-fastapi/) | SMTP email sender |
 | `oauth2fast-fastapi` | [![PyPI](https://img.shields.io/pypi/v/oauth2fast-fastapi)](https://pypi.org/project/oauth2fast-fastapi/) | JWT Auth + User management |
 | `permissions2fast-fastapi` | [![PyPI](https://img.shields.io/pypi/v/permissions2fast-fastapi)](https://pypi.org/project/permissions2fast-fastapi/) | RBAC + Redis permission cache |
+
+## 📋 Naming Conventions
+
+This package follows consistent naming conventions for models and database tables:
+
+### Model Classes (Python)
+- **Singular** PascalCase
+- Examples: `User`, `Role`, `Permission`, `Category`, `Route`
+
+### Database Tables
+- **Plural** snake_case
+- Examples: `users`, `roles`, `permissions`, `categories`, `routes`
+
+### Many-to-Many Join Tables
+- **Plural** snake_case on both table names
+- **Alphabetical order** of the two table names
+- Examples: `role_users` (r < u), `permission_roles` (p < r), `permission_routes` (p < r)
+
+### Tenant-Local vs Auth DB Models
+- **Auth DB**: `Tenant` (table: `tenants`), `TenantUser` (table: `tenant_users`) - maps users ↔ tenants
+- **Tenant DB**: `User`, `Role`, `Permission`, `Category`, `Route` - local tenant entities
+
+### Generic Categories
+- Use `Category` for generic categorization (not `PermissionCategory`)
+- Can be reused across different entity types
 
 ---
 

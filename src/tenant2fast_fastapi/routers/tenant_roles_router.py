@@ -7,16 +7,16 @@ from tools2fast_fastapi import APIResponse
 from ..dependencies import get_current_tenant, has_tenant_permission
 from ..models import Tenant
 from ..schemas.rbac.role_schema import (
-    TenantRoleRead,
-    TenantRoleCreate,
-    TenantRoleUpdate
+    RoleRead,
+    RoleCreate,
+    RoleUpdate
 )
 from ..schemas.response_schemas import (
-    TenantRoleCreatedResponse,
-    TenantRoleListResponse,
-    TenantRoleSingleResponse,
-    TenantRoleResponse,
-    TenantRoleErrorResponse,
+    RoleCreatedResponse,
+    RoleListResponse,
+    RoleSingleResponse,
+    RoleResponse,
+    RoleErrorResponse,
     DeleteSuccessResponse,
     NoContentResponse,
 )
@@ -38,19 +38,19 @@ tenant_roles_router = APIRouter(
 
 @tenant_roles_router.post(
     "/",
-    response_model=TenantRoleCreatedResponse,
+    response_model=RoleCreatedResponse,
     status_code=status.HTTP_201_CREATED,
     dependencies=[Depends(has_tenant_permission("/roles", "POST"))]
 )
 async def create_role(
-    role_data: TenantRoleCreate,
+    role_data: RoleCreate,
     tenant: Tenant = Depends(get_current_tenant)
-) -> TenantRoleCreatedResponse:
+) -> RoleCreatedResponse:
     """Create a new role in the tenant."""
     async with await get_tenant_session(tenant.id) as session:
         role = await tenant_role_service.create_role(role_data, session)
-        return TenantRoleCreatedResponse(
-            role=TenantRoleResponse(
+        return RoleCreatedResponse(
+            role=RoleResponse(
                 id=role.id,
                 name=role.name,
                 description=role.description,
@@ -63,20 +63,20 @@ async def create_role(
 
 @tenant_roles_router.get(
     "/",
-    response_model=TenantRoleListResponse,
+    response_model=RoleListResponse,
     dependencies=[Depends(has_tenant_permission("/roles", "GET"))]
 )
 async def list_roles(
     skip: int = 0,
     limit: int = 100,
     tenant: Tenant = Depends(get_current_tenant)
-) -> TenantRoleListResponse:
+) -> RoleListResponse:
     """List all available roles in the tenant."""
     async with await get_tenant_session(tenant.id) as session:
         roles = await tenant_role_service.list_roles(session, skip, limit)
-        return TenantRoleListResponse(
+        return RoleListResponse(
             roles=[
-                TenantRoleResponse(
+                RoleResponse(
                     id=r.id,
                     name=r.name,
                     description=r.description,
@@ -92,14 +92,14 @@ async def list_roles(
 
 @tenant_roles_router.get(
     "/{role_id}",
-    response_model=TenantRoleSingleResponse,
+    response_model=RoleSingleResponse,
     dependencies=[Depends(has_tenant_permission("/roles/{role_id}", "GET"))],
-    responses={404: {"model": TenantRoleErrorResponse}},
+    responses={404: {"model": RoleErrorResponse}},
 )
 async def get_role(
     role_id: int,
     tenant: Tenant = Depends(get_current_tenant)
-) -> JSONResponse | TenantRoleSingleResponse:
+) -> JSONResponse | RoleSingleResponse:
     """Get a specific role by ID."""
     async with await get_tenant_session(tenant.id) as session:
         role = await tenant_role_service.get_role_by_id(role_id, session)
@@ -109,8 +109,8 @@ async def get_role(
                 status_code=404,
             )
             return JSONResponse(status_code=http_status, content=error_resp.model_dump())
-        return TenantRoleSingleResponse(
-            role=TenantRoleResponse(
+        return RoleSingleResponse(
+            role=RoleResponse(
                 id=role.id,
                 name=role.name,
                 description=role.description,
@@ -123,19 +123,19 @@ async def get_role(
 
 @tenant_roles_router.patch(
     "/{role_id}",
-    response_model=TenantRoleSingleResponse,
+    response_model=RoleSingleResponse,
     dependencies=[Depends(has_tenant_permission("/roles/{role_id}", "PATCH"))]
 )
 async def update_role(
     role_id: int,
-    role_data: TenantRoleUpdate,
+    role_data: RoleUpdate,
     tenant: Tenant = Depends(get_current_tenant)
-) -> TenantRoleSingleResponse:
+) -> RoleSingleResponse:
     """Update a role's metadata or permissions."""
     async with await get_tenant_session(tenant.id) as session:
         role = await tenant_role_service.update_role(role_id, role_data, session)
-        return TenantRoleSingleResponse(
-            role=TenantRoleResponse(
+        return RoleSingleResponse(
+            role=RoleResponse(
                 id=role.id,
                 name=role.name,
                 description=role.description,

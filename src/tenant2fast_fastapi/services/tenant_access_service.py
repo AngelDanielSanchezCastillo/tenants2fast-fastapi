@@ -4,15 +4,15 @@ from sqlmodel.ext.asyncio.session import AsyncSession
 from sqlmodel import select
 
 from rbac2fast_core.protocols.services import AccessServiceProtocol
-from ..models.tenant_user_model import TenantUser
-from ..models.role_model import TenantRole
-from ..models.permission_model import TenantPermission
-from ..models.route_model import TenantRoute
+from ..models.user_model import User
+from ..models.role_model import Role
+from ..models.permission_model import Permission
+from ..models.route_model import Route
 from ..models.assignments_model import (
-    TenantUserRole,
-    TenantRolePermission,
-    TenantUserPermission,
-    TenantPermissionRoute
+    RoleUser,
+    PermissionRole,
+    PermissionUser,
+    PermissionRoute
 )
 
 
@@ -28,13 +28,13 @@ class TenantAccessService(AccessServiceProtocol):
         """
         Check if a user has access to a specific route.
         Lógica de resolución:
-        1. Obtener TenantUser (copia local)
-        2. TenantUserPermission override (is_allowed=True -> allow, is_allowed=False -> deny)
-        3. TenantRolePermission (por roles del usuario)
+        1. Obtener User (copia local)
+        2. PermissionUser override (is_allowed=True -> allow, is_allowed=False -> deny)
+        3. PermissionRole (por roles del usuario)
         4. deny por defecto
         """
-        # 1. Get TenantUser ID
-        result = await session.exec(select(TenantUser.id).where(TenantUser.auth_user_id == auth_user_id)
+        # 1. Get User ID
+        result = await session.exec(select(User.id).where(User.auth_user_id == auth_user_id)
         )
         tenant_user_id = result.one_or_none()
         if not tenant_user_id:
@@ -48,13 +48,13 @@ class TenantAccessService(AccessServiceProtocol):
 
     async def get_user_permissions(self, tenant_user_id: int, session: AsyncSession) -> List[dict]:
         """
-        Resolve all permissions for a tenant user.
+        Resolve all permissions for a user.
         Returns a list of permission objects with their associated routes.
         """
-        # 1. Direct overrides (UserPermission)
-        result = await session.exec(select(TenantPermission, TenantUserPermission.is_allowed)
-            .join(TenantUserPermission)
-            .where(TenantUserPermission.user_id == tenant_user_id)
+        # 1. Direct overrides (PermissionUser)
+        result = await session.exec(select(Permission, PermissionUser.is_allowed)
+            .join(PermissionUser)
+            .where(PermissionUser.user_id == tenant_user_id)
         )
         direct_perms = []
         for perm, is_allowed in result.all():
@@ -67,10 +67,10 @@ class TenantAccessService(AccessServiceProtocol):
             })
 
         # 2. Role permissions
-        result = await session.exec(select(TenantPermission)
-            .join(TenantRolePermission)
-            .join(TenantUserRole, TenantRolePermission.role_id == TenantUserRole.role_id)
-            .where(TenantUserRole.user_id == tenant_user_id)
+        result = await session.exec(select(Permission)
+            .join(PermissionRole)
+            .join(RoleUser, PermissionRole.role_id == RoleUser.role_id)
+            .where(RoleUser.user_id == tenant_user_id)
         )
         role_perms = []
         for perm in result.all():
@@ -87,9 +87,9 @@ class TenantAccessService(AccessServiceProtocol):
 
     async def _get_permission_routes(self, permission_id: int, session: AsyncSession) -> List[dict]:
         """Internal helper to get routes for a permission."""
-        result = await session.exec(select(TenantRoute)
-            .join(TenantPermissionRoute)
-            .where(TenantPermissionRoute.permission_id == permission_id)
+        result = await session.exec(select(Route)
+            .join(PermissionRoute)
+            .where(PermissionRoute.permission_id == permission_id)
         )
         return [
             {"path": r.path, "method": r.method} for r in result.all()

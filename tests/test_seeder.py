@@ -6,8 +6,8 @@ import pytest
 from sqlmodel import select
 from tenant2fast_fastapi.services.tenant_rbac_seeder import seed_tenant_rbac
 from tenant2fast_fastapi.utils.tenant_migrations import seed_all_tenants
-from tenant2fast_fastapi.models.role_model import TenantRole
-from tenant2fast_fastapi.models.permission_model import TenantPermission
+from tenant2fast_fastapi.models.role_model import Role
+from tenant2fast_fastapi.models.permission_model import Permission
 from tenant2fast_fastapi.databases.tenant_db_factory import get_tenant_session
 
 
@@ -18,14 +18,14 @@ async def test_seed_tenant_rbac_creates_defaults(test_tenant):
     session = await get_tenant_session(test_tenant.id)
     async with session:
         # Check Roles
-        roles = await session.exec(select(TenantRole))
+        roles = await session.exec(select(Role))
         role_names = [r.name for r in roles.all()]
         assert "Owner" in role_names
         assert "Admin" in role_names
         assert "Member" in role_names
 
         # Check Permissions
-        perms = await session.exec(select(TenantPermission))
+        perms = await session.exec(select(Permission))
         perm_names = [p.name for p in perms.all()]
         assert "view_tenant_info" in perm_names
 
@@ -39,7 +39,7 @@ async def test_seed_tenant_rbac_is_idempotent(test_tenant):
     session = await get_tenant_session(test_tenant.id)
     async with session:
         # Verify counts
-        roles_count = await session.exec(select(TenantRole))
+        roles_count = await session.exec(select(Role))
         role_all = roles_count.all()
         # Should be exactly 3 (Owner, Admin, Member)
         assert len(role_all) == 3
@@ -54,5 +54,5 @@ async def test_seed_all_tenants(test_tenant):
     # Check if the tenant still has its data
     session = await get_tenant_session(test_tenant.id)
     async with session:
-        roles = await session.exec(select(TenantRole))
+        roles = await session.exec(select(Role))
         assert len(roles.all()) == 3

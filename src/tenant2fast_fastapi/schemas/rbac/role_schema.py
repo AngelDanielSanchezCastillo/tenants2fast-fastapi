@@ -2,18 +2,18 @@ from pydantic import ConfigDict
 from rbac2fast_core.schemas import RoleBase, RoleCreate, RoleRead, RoleUpdate
 
 
-class TenantRoleCreate(RoleCreate):
-    """Schema to create a tenant role."""
+class RoleCreate(RoleCreate):
+    """Schema to create a role."""
     pass
 
 
-class TenantRoleRead(RoleRead):
-    """Schema to read a tenant role."""
+class RoleRead(RoleRead):
+    """Schema to read a role."""
     pass
 
     model_config = ConfigDict(from_attributes=True)
 
 
-class TenantRoleUpdate(RoleUpdate):
-    """Schema to update a tenant role."""
+class RoleUpdate(RoleUpdate):
+    """Schema to update a role."""
     pass

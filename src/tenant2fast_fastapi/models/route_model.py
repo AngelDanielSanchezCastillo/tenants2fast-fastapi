@@ -2,12 +2,12 @@ from sqlmodel import Field
 from .bases import TenantBaseModel
 
 
-class TenantRoute(TenantBaseModel, table=True):
+class Route(TenantBaseModel, table=True):
     """
     Route that an application has.
     """
 
-    __tablename__ = "tenant_routes"
+    __tablename__ = "routes"
 
     path: str = Field(index=True)
     method: str = Field(index=True, default="GET")

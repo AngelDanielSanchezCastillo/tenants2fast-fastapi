@@ -1,10 +1,11 @@
 from typing import Annotated
 
 from fastapi import Depends, HTTPException, Request, status
-from oauth2fast_fastapi.models.user_model import User
+from oauth2fast_fastapi.models.user_model import User as AuthUser
 
 from .tenant_context import get_current_tenant, get_current_user
-from ..models import Tenant, TenantUser
+from ..models import Tenant
+from ..models.user_model import User  # Local user in tenant DB (not the Auth mapping)
 from ..services.tenant_access_service import tenant_access_service
 from ..services.tenant_role_service import tenant_role_service
 from ..services.tenant_user_service import get_tenant_user_by_auth_id
@@ -47,9 +48,8 @@ def has_tenant_permission(
             ...
     """
     async def _check(
-        request: Request,
         tenant: Annotated[Tenant, Depends(get_current_tenant)],
-        user: Annotated[User, Depends(get_current_user)],
+        user: Annotated[AuthUser, Depends(get_current_user)],
     ) -> bool:
         # -- Resolve route/method to check ------------------------------------
         if permission_route is not None:
@@ -110,14 +110,14 @@ def has_tenant_role(role_name: str):
 
         @router.delete("/settings")
         async def delete_settings(
-            user: TenantUser = Depends(has_tenant_role("Owner"))
+            user: User = Depends(has_tenant_role("Owner"))
         ):
             ...
     """
     async def _check(
         tenant: Annotated[Tenant, Depends(get_current_tenant)],
-        user: Annotated[User, Depends(get_current_user)],
-    ) -> TenantUser:
+        user: Annotated[AuthUser, Depends(get_current_user)],
+    ) -> User:
         async with await get_tenant_session(tenant.id) as session:
             tenant_user = await get_tenant_user_by_auth_id(user.id, session)
             if not tenant_user:
@@ -145,8 +145,8 @@ def has_tenant_role(role_name: str):
 
 async def get_current_tenant_user(
     tenant: Tenant = Depends(get_current_tenant),
-    user: User = Depends(get_current_user),
-) -> TenantUser:
+    user: AuthUser = Depends(get_current_user),
+) -> User:
     """
     Dependency to get the current user's record inside the tenant.
     """

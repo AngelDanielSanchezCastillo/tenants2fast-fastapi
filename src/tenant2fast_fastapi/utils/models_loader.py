@@ -6,15 +6,15 @@ Central place to import all models to ensure they register with SQLAlchemy/SQLMo
 
 def import_tenant_models():
     """Import all models that belong to the tenant-specific metadata."""
-    from ..models.tenant_user_model import TenantUser
-    from ..models.role_model import TenantRole
-    from ..models.permission_model import TenantPermission
-    from ..models.route_model import TenantRoute
+    from ..models.user_model import User
+    from ..models.role_model import Role
+    from ..models.permission_model import Permission
+    from ..models.route_model import Route
     from ..models.assignments_model import (
-        TenantUserRole, 
-        TenantRolePermission,
-        TenantPermissionRoute,
-        TenantUserPermission
+        RoleUser, 
+        PermissionRole,
+        PermissionRoute,
+        PermissionUser
     )
     # Add any other tenant-specific models here
 
@@ -22,4 +22,4 @@ def import_tenant_models():
 def import_auth_models():
     """Import all models that belong to the Auth/Global metadata."""
     from ..models.tenant_model import Tenant
-    from ..models.user_tenant_model import UserTenant
+    from ..models.user_tenant_model import TenantUser

@@ -8,30 +8,30 @@ from rbac2fast_core.schemas import (
 )
 
 
-class TenantPermissionCategoryCreate(PermissionCategoryCreate):
-    """Schema to create a tenant permission category."""
+class CategoryCreate(PermissionCategoryCreate):
+    """Schema to create a permission category."""
     pass
 
 
-class TenantPermissionCategoryRead(PermissionCategoryRead):
-    """Schema to read a tenant permission category."""
-    pass
-
-    model_config = ConfigDict(from_attributes=True)
-
-
-class TenantPermissionCreate(PermissionCreate):
-    """Schema to create a tenant permission."""
-    pass
-
-
-class TenantPermissionRead(PermissionRead):
-    """Schema to read a tenant permission."""
+class CategoryRead(PermissionCategoryRead):
+    """Schema to read a permission category."""
     pass
 
     model_config = ConfigDict(from_attributes=True)
 
 
-class TenantPermissionUpdate(PermissionUpdate):
-    """Schema to update a tenant permission."""
+class PermissionCreate(PermissionCreate):
+    """Schema to create a permission."""
+    pass
+
+
+class PermissionRead(PermissionRead):
+    """Schema to read a permission."""
+    pass
+
+    model_config = ConfigDict(from_attributes=True)
+
+
+class PermissionUpdate(PermissionUpdate):
+    """Schema to update a permission."""
     pass

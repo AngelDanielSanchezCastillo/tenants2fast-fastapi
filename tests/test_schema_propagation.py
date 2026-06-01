@@ -5,7 +5,7 @@ test_schema_propagation.py – tests for mass migration and seeding across all t
 import pytest
 from sqlmodel import select
 from tenant2fast_fastapi.models.tenant_model import Tenant
-from tenant2fast_fastapi.models.role_model import TenantRole
+from tenant2fast_fastapi.models.role_model import Role
 from tenant2fast_fastapi.utils.tenant_migrations import (
     run_all_tenant_migrations,
     seed_all_tenants,
@@ -53,13 +53,13 @@ async def test_run_migrations_and_seed_all_tenants(session):
         # 5. Verify results in Tenant A
         session_a = await get_tenant_session(tenant_a.id)
         async with session_a:
-            roles = await session_a.exec(select(TenantRole))
+            roles = await session_a.exec(select(Role))
             assert len(roles.all()) == 3
             
         # 6. Verify results in Tenant B
         session_b = await get_tenant_session(tenant_b.id)
         async with session_b:
-            roles = await session_b.exec(select(TenantRole))
+            roles = await session_b.exec(select(Role))
             assert len(roles.all()) == 3
             
     finally:

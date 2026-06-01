@@ -6,14 +6,14 @@ from tools2fast_fastapi import APIResponse
 
 from ..dependencies import get_current_tenant, has_tenant_permission
 from ..models import Tenant
-from ..schemas.rbac.permission_schema import TenantPermissionRead
+from ..schemas.rbac.permission_schema import PermissionRead
 from ..schemas.response_schemas import (
-    TenantPermissionListResponse,
-    TenantPermissionSingleResponse,
-    TenantPermissionResponse,
-    TenantPermissionCategoryListResponse,
-    TenantPermissionCategoryResponse,
-    TenantPermissionErrorResponse,
+    PermissionListResponse,
+    PermissionSingleResponse,
+    PermissionResponse,
+    CategoryListResponse,
+    CategoryResponse,
+    PermissionErrorResponse,
 )
 from ..settings import settings
 from ..services.tenant_permission_service import tenant_permission_service
@@ -34,18 +34,18 @@ tenant_permissions_router = APIRouter(
 
 @tenant_permissions_router.get(
     "/",
-    response_model=TenantPermissionListResponse,
+    response_model=PermissionListResponse,
     dependencies=[Depends(has_tenant_permission("/permissions", "GET"))]
 )
 async def list_permissions(
     tenant: Tenant = Depends(get_current_tenant)
-) -> TenantPermissionListResponse:
+) -> PermissionListResponse:
     """List all available permissions in the tenant."""
     async with await get_tenant_session(tenant.id) as session:
         permissions = await tenant_permission_service.list_permissions(session)
-        return TenantPermissionListResponse(
+        return PermissionListResponse(
             permissions=[
-                TenantPermissionResponse(
+                PermissionResponse(
                     id=p.id,
                     name=p.name,
                     permission_category_id=p.permission_category_id,
@@ -58,18 +58,18 @@ async def list_permissions(
 
 @tenant_permissions_router.get(
     "/categories",
-    response_model=TenantPermissionCategoryListResponse,
+    response_model=CategoryListResponse,
     dependencies=[Depends(has_tenant_permission("/permissions/categories", "GET"))]
 )
 async def list_categories(
     tenant: Tenant = Depends(get_current_tenant)
-) -> TenantPermissionCategoryListResponse:
+) -> CategoryListResponse:
     """List all permission categories."""
     async with await get_tenant_session(tenant.id) as session:
         categories = await tenant_permission_service.list_categories(session)
-        return TenantPermissionCategoryListResponse(
+        return CategoryListResponse(
             categories=[
-                TenantPermissionCategoryResponse(
+                CategoryResponse(
                     id=c.id,
                     name=c.name,
                 )
@@ -81,14 +81,14 @@ async def list_categories(
 
 @tenant_permissions_router.get(
     "/{permission_id}",
-    response_model=TenantPermissionSingleResponse,
+    response_model=PermissionSingleResponse,
     dependencies=[Depends(has_tenant_permission("/permissions/{permission_id}", "GET"))],
-    responses={404: {"model": TenantPermissionErrorResponse}},
+    responses={404: {"model": PermissionErrorResponse}},
 )
 async def get_permission(
     permission_id: int,
     tenant: Tenant = Depends(get_current_tenant)
-) -> JSONResponse | TenantPermissionSingleResponse:
+) -> JSONResponse | PermissionSingleResponse:
     """Get a specific permission by ID."""
     async with await get_tenant_session(tenant.id) as session:
         permission = await tenant_permission_service.get_permission_by_id(permission_id, session)
@@ -98,8 +98,8 @@ async def get_permission(
                 status_code=404,
             )
             return JSONResponse(status_code=http_status, content=error_resp.model_dump())
-        return TenantPermissionSingleResponse(
-            permission=TenantPermissionResponse(
+        return PermissionSingleResponse(
+            permission=PermissionResponse(
                 id=permission.id,
                 name=permission.name,
                 permission_category_id=permission.permission_category_id,

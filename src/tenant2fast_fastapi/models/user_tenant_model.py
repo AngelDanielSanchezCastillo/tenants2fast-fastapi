@@ -3,13 +3,13 @@ from sqlmodel import BigInteger, Column, Field, ForeignKey
 from oauth2fast_fastapi.models.bases import AuthModel
 
 
-class UserTenant(AuthModel, table=True):
+class TenantUser(AuthModel, table=True):
     """
     Many-to-many relationship between users and tenants.
     Allows users to belong to multiple tenants.
     """
 
-    __tablename__ = "user_tenants"
+    __tablename__ = "tenant_users"
 
     user_id: int = Field(
         sa_column=Column(BigInteger, ForeignKey("users.id", ondelete="CASCADE"))

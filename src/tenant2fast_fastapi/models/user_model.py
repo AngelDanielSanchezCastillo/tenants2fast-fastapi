@@ -2,13 +2,13 @@ from sqlmodel import Field
 from .bases import TenantBaseModel
 
 
-class TenantUser(TenantBaseModel, table=True):
+class User(TenantBaseModel, table=True):
     """
     Tenant-specific user information.
     Links a global user (from Auth DB) to a specific tenant.
     """
 
-    __tablename__ = "tenant_users"
+    __tablename__ = "users"
 
     auth_user_id: int = Field(index=True, unique=True)
 

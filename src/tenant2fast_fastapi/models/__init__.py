@@ -1,30 +1,30 @@
 """Models for tenant2fast-fastapi"""
 
 from .tenant_model import Tenant, TenantRead
-from .user_tenant_model import UserTenant
-from .tenant_user_model import TenantUser
-from .role_model import TenantRole
-from .permission_category_model import TenantPermissionCategory
-from .permission_model import TenantPermission
-from .route_model import TenantRoute
+from .user_tenant_model import TenantUser  # Mapping in Auth DB (users ↔ tenants)
+from .user_model import User  # Local user in Tenant DB
+from .role_model import Role
+from .permission_category_model import Category
+from .permission_model import Permission
+from .route_model import Route
 from .assignments_model import (
-    TenantUserRole,
-    TenantRolePermission,
-    TenantUserPermission,
-    TenantPermissionRoute,
+    RoleUser,
+    PermissionRole,
+    PermissionRoute,
+    PermissionUser,
 )
 
 __all__ = [
     "Tenant",
     "TenantRead",
-    "UserTenant",
-    "TenantUser",
-    "TenantRole",
-    "TenantPermissionCategory",
-    "TenantPermission",
-    "TenantRoute",
-    "TenantUserRole",
-    "TenantRolePermission",
-    "TenantUserPermission",
-    "TenantPermissionRoute",
+    "TenantUser",  # Mapping in Auth DB (users ↔ tenants)
+    "User",  # Local user in Tenant DB
+    "Role",
+    "Category",
+    "Permission",
+    "Route",
+    "RoleUser",
+    "PermissionRole",
+    "PermissionRoute",
+    "PermissionUser",
 ]

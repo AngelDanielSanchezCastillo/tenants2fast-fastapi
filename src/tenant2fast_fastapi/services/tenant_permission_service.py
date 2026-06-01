@@ -9,10 +9,10 @@ from rbac2fast_core.protocols.models import (
     PermissionRouteProtocol
 )
 from rbac2fast_core.protocols.services import PermissionServiceProtocol
-from ..models.permission_category_model import TenantPermissionCategory
-from ..models.permission_model import TenantPermission
-from ..models.assignments_model import TenantUserPermission, TenantPermissionRoute
-from ..models.route_model import TenantRoute
+from ..models.permission_category_model import Category
+from ..models.permission_model import Permission
+from ..models.assignments_model import PermissionUser, PermissionRoute
+from ..models.route_model import Route
 
 
 class TenantPermissionService(PermissionServiceProtocol):
@@ -23,9 +23,9 @@ class TenantPermissionService(PermissionServiceProtocol):
 
     async def create_category(
         self, category_data: Any, session: AsyncSession
-    ) -> TenantPermissionCategory:
+    ) -> Category:
         """Create a new permission category."""
-        category = TenantPermissionCategory(**category_data.model_dump())
+        category = Category(**category_data.model_dump())
         session.add(category)
         await session.commit()
         await session.refresh(category)
@@ -33,16 +33,16 @@ class TenantPermissionService(PermissionServiceProtocol):
 
     async def list_categories(
         self, session: AsyncSession, skip: int = 0, limit: int = 100
-    ) -> List[TenantPermissionCategory]:
+    ) -> List[Category]:
         """List all permission categories."""
-        result = await session.exec(select(TenantPermissionCategory).offset(skip).limit(limit))
+        result = await session.exec(select(Category).offset(skip).limit(limit))
         return list(result.all())
 
     async def create_permission(
         self, permission_data: Any, session: AsyncSession
-    ) -> TenantPermission:
+    ) -> Permission:
         """Create a new permission."""
-        permission = TenantPermission(**permission_data.model_dump())
+        permission = Permission(**permission_data.model_dump())
         session.add(permission)
         await session.commit()
         await session.refresh(permission)
@@ -50,21 +50,21 @@ class TenantPermissionService(PermissionServiceProtocol):
 
     async def get_permission(
         self, permission_id: int, session: AsyncSession
-    ) -> Optional[TenantPermission]:
+    ) -> Optional[Permission]:
         """Get permission by ID."""
-        result = await session.exec(select(TenantPermission).where(TenantPermission.id == permission_id))
+        result = await session.exec(select(Permission).where(Permission.id == permission_id))
         return result.one_or_none()
 
     async def list_permissions(
         self, session: AsyncSession, skip: int = 0, limit: int = 100
-    ) -> List[TenantPermission]:
+    ) -> List[Permission]:
         """List all permissions in the tenant."""
-        result = await session.exec(select(TenantPermission).offset(skip).limit(limit))
+        result = await session.exec(select(Permission).offset(skip).limit(limit))
         return list(result.all())
 
     async def update_permission(
         self, permission_id: int, permission_data: Any, session: AsyncSession
-    ) -> Optional[TenantPermission]:
+    ) -> Optional[Permission]:
         """Update a permission's metadata."""
         permission = await self.get_permission(permission_id, session)
         if not permission:
@@ -93,9 +93,9 @@ class TenantPermissionService(PermissionServiceProtocol):
 
     async def add_permission_route(
         self, permission_id: int, route_id: int, session: AsyncSession
-    ) -> TenantPermissionRoute:
+    ) -> PermissionRoute:
         """Protect a route with a permission."""
-        assignment = TenantPermissionRoute(permission_id=permission_id, route_id=route_id)
+        assignment = PermissionRoute(permission_id=permission_id, route_id=route_id)
         session.add(assignment)
         await session.commit()
         await session.refresh(assignment)
@@ -103,9 +103,9 @@ class TenantPermissionService(PermissionServiceProtocol):
 
     async def assign_user_permission(
         self, user_id: int, permission_id: int, session: AsyncSession
-    ) -> TenantUserPermission:
-        """Directly assign a permission to a tenant user (override)."""
-        assignment = TenantUserPermission(user_id=user_id, permission_id=permission_id, is_allowed=True)
+    ) -> PermissionUser:
+        """Directly assign a permission to a user (override)."""
+        assignment = PermissionUser(user_id=user_id, permission_id=permission_id, is_allowed=True)
         session.add(assignment)
         await session.commit()
         await session.refresh(assignment)
@@ -113,21 +113,21 @@ class TenantPermissionService(PermissionServiceProtocol):
 
     async def list_user_permissions(
         self, user_id: int, session: AsyncSession
-    ) -> List[TenantPermission]:
-        """List all permissions directly assigned to a tenant user."""
-        result = await session.exec(select(TenantPermission)
-            .join(TenantUserPermission)
-            .where(TenantUserPermission.user_id == user_id)
+    ) -> List[Permission]:
+        """List all permissions directly assigned to a user."""
+        result = await session.exec(select(Permission)
+            .join(PermissionUser)
+            .where(PermissionUser.user_id == user_id)
         )
         return list(result.all())
 
     async def remove_user_permission(
         self, user_id: int, permission_id: int, session: AsyncSession
     ) -> bool:
-        """Remove a direct permission assignment from a tenant user."""
-        result = await session.exec(select(TenantUserPermission).where(
-                TenantUserPermission.user_id == user_id,
-                TenantUserPermission.permission_id == permission_id
+        """Remove a direct permission assignment from a user."""
+        result = await session.exec(select(PermissionUser).where(
+                PermissionUser.user_id == user_id,
+                PermissionUser.permission_id == permission_id
             )
         )
         assignment = result.one_or_none()

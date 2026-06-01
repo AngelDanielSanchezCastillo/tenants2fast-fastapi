@@ -102,8 +102,8 @@ class TenantMiddleware(BaseHTTPMiddleware):
         auth_engine = get_manager().get_engine("auth")
         
         async with AsyncSession(auth_engine, expire_on_commit=False) as session:
-            from tenant2fast_fastapi.models.user_tenant_model import UserTenant
-            result = await session.exec(select(UserTenant).where(UserTenant.user_id == user_id))
+            from tenant2fast_fastapi.models.user_tenant_model import TenantUser
+            result = await session.exec(select(TenantUser).where(TenantUser.user_id == user_id))
             links = result.all()
             
             if not links:

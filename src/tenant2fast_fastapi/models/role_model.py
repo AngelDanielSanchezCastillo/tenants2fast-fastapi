@@ -2,12 +2,12 @@ from sqlmodel import Field
 from .bases import TenantBaseModel
 
 
-class TenantRole(TenantBaseModel, table=True):
+class Role(TenantBaseModel, table=True):
     """
     Role associated with a tenant.
     """
 
-    __tablename__ = "tenant_roles"
+    __tablename__ = "roles"
 
     name: str = Field(unique=True, index=True)
     description: str | None = Field(default=None)

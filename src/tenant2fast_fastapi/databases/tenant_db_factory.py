@@ -9,15 +9,15 @@ from ..settings import settings as tenant_settings
 from ..models.bases import tenant_metadata
 
 # Force import of all tenant models to ensure they register with MetaData
-from ..models.role_model import TenantRole
-from ..models.permission_model import TenantPermission
-from ..models.tenant_user_model import TenantUser
-from ..models.route_model import TenantRoute
+from ..models.role_model import Role
+from ..models.permission_model import Permission
+from ..models.user_model import User
+from ..models.route_model import Route
 from ..models.assignments_model import (
-    TenantUserRole,
-    TenantRolePermission,
-    TenantPermissionRoute,
-    TenantUserPermission
+    RoleUser,
+    PermissionRole,
+    PermissionRoute,
+    PermissionUser
 )
 
 

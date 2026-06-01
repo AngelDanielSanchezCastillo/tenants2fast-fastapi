@@ -1,16 +1,16 @@
 """RBAC schemas for tenants2fast-fastapi"""
 
 from .role_schema import (
-    TenantRoleCreate,
-    TenantRoleRead,
-    TenantRoleUpdate,
+    RoleCreate,
+    RoleRead,
+    RoleUpdate,
 )
 from .permission_schema import (
-    TenantPermissionCategoryCreate,
-    TenantPermissionCategoryRead,
-    TenantPermissionCreate,
-    TenantPermissionRead,
-    TenantPermissionUpdate,
+    CategoryCreate,
+    CategoryRead,
+    PermissionCreate,
+    PermissionRead,
+    PermissionUpdate,
 )
 from .user_schema import (
     TenantUserCreate,
@@ -19,14 +19,14 @@ from .user_schema import (
 )
 
 __all__ = [
-    "TenantRoleCreate",
-    "TenantRoleRead",
-    "TenantRoleUpdate",
-    "TenantPermissionCategoryCreate",
-    "TenantPermissionCategoryRead",
-    "TenantPermissionCreate",
-    "TenantPermissionRead",
-    "TenantPermissionUpdate",
+    "RoleCreate",
+    "RoleRead",
+    "RoleUpdate",
+    "CategoryCreate",
+    "CategoryRead",
+    "PermissionCreate",
+    "PermissionRead",
+    "PermissionUpdate",
     "TenantUserCreate",
     "TenantUserRead",
     "TenantUserUpdate",

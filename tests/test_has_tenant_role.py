@@ -8,25 +8,25 @@ from httpx import AsyncClient, ASGITransport
 from tests.app_fixture import create_test_app
 from oauth2fast_fastapi.utils.token_utils import create_access_token
 from tenant2fast_fastapi import has_tenant_role
-from tenant2fast_fastapi.models.tenant_user_model import TenantUser
-from tenant2fast_fastapi.models.role_model import TenantRole
-from tenant2fast_fastapi.models.assignments_model import TenantUserRole
+from tenant2fast_fastapi.models.user_model import User
+from tenant2fast_fastapi.models.role_model import Role
+from tenant2fast_fastapi.models.assignments_model import RoleUser
 
 
 @pytest.mark.asyncio
 async def test_role_granted(test_user, test_tenant, user_tenant_link, tenant_session):
     """Verify access is granted when user has the specific role."""
-    # 1. Create Tenant User
-    t_user = TenantUser(auth_user_id=test_user.id)
+    # 1. Create User in tenant DB
+    t_user = User(auth_user_id=test_user.id)
     tenant_session.add(t_user)
     await tenant_session.flush()
 
     # 2. Assign Role
-    role = TenantRole(name="TestOwner")
+    role = Role(name="TestOwner")
     tenant_session.add(role)
     await tenant_session.flush()
     
-    assignment = TenantUserRole(user_id=t_user.id, role_id=role.id)
+    assignment = RoleUser(user_id=t_user.id, role_id=role.id)
     tenant_session.add(assignment)
     await tenant_session.commit()
 
@@ -47,14 +47,14 @@ async def test_role_granted(test_user, test_tenant, user_tenant_link, tenant_ses
 @pytest.mark.asyncio
 async def test_role_denied_wrong_role(test_user, test_tenant, user_tenant_link, tenant_session):
     """Verify access is denied when user has a different role."""
-    t_user = TenantUser(auth_user_id=test_user.id)
+    t_user = User(auth_user_id=test_user.id)
     tenant_session.add(t_user)
     
-    role = TenantRole(name="TestMember")
+    role = Role(name="TestMember")
     tenant_session.add(role)
     await tenant_session.flush()
     
-    assignment = TenantUserRole(user_id=t_user.id, role_id=role.id)
+    assignment = RoleUser(user_id=t_user.id, role_id=role.id)
     tenant_session.add(assignment)
     await tenant_session.commit()
 

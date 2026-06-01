@@ -24,7 +24,7 @@ from oauth2fast_fastapi import (
 )
 from pgsqlasync2fast_fastapi.connection import get_manager
 from tenant2fast_fastapi.models.tenant_model import Tenant
-from tenant2fast_fastapi.models.user_tenant_model import UserTenant
+from tenant2fast_fastapi.models.user_tenant_model import TenantUser  # Mapping in Auth DB
 from tenant2fast_fastapi.databases.tenant_db_factory import (
     create_tenant_database,
     initialize_tenant_schema,
@@ -131,9 +131,9 @@ async def test_tenant(session: AsyncSession) -> Tenant:
 
 
 @pytest.fixture
-async def user_tenant_link(session: AsyncSession, test_user: User, test_tenant: Tenant) -> UserTenant:
+async def user_tenant_link(session: AsyncSession, test_user: User, test_tenant: Tenant) -> TenantUser:
     """Link the test user to the test tenant in the Auth DB."""
-    link = UserTenant(user_id=test_user.id, tenant_id=test_tenant.id)
+    link = TenantUser(user_id=test_user.id, tenant_id=test_tenant.id)
     session.add(link)
     await session.commit()
     await session.refresh(link)

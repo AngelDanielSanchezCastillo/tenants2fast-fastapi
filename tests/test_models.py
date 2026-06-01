@@ -1,5 +1,5 @@
 """
-test_models.py – integration tests for Tenant and UserTenant models.
+test_models.py – integration tests for Tenant and TenantUser models.
 
 Requires a running PostgreSQL instance configured via .env.
 """
@@ -9,7 +9,7 @@ from sqlmodel.ext.asyncio.session import AsyncSession
 from sqlmodel import select
 
 from tenant2fast_fastapi.models.tenant_model import Tenant
-from tenant2fast_fastapi.models.user_tenant_model import UserTenant
+from tenant2fast_fastapi.models.user_tenant_model import TenantUser
 
 
 @pytest.mark.asyncio
@@ -49,8 +49,8 @@ async def test_tenant_slug_is_unique(session: AsyncSession):
 
 @pytest.mark.asyncio
 async def test_associate_user_to_tenant(session: AsyncSession, test_user, test_tenant):
-    """A UserTenant row correctly links User and Tenant."""
-    user_tenant = UserTenant(user_id=test_user.id, tenant_id=test_tenant.id)
+    """A TenantUser row correctly links User and Tenant."""
+    user_tenant = TenantUser(user_id=test_user.id, tenant_id=test_tenant.id)
     session.add(user_tenant)
     await session.commit()
     await session.refresh(user_tenant)
@@ -63,11 +63,11 @@ async def test_associate_user_to_tenant(session: AsyncSession, test_user, test_t
 @pytest.mark.asyncio
 async def test_query_tenants_for_user(session: AsyncSession, test_user, test_tenant):
     """All tenants associated with a user can be selected."""
-    user_tenant = UserTenant(user_id=test_user.id, tenant_id=test_tenant.id)
+    user_tenant = TenantUser(user_id=test_user.id, tenant_id=test_tenant.id)
     session.add(user_tenant)
     await session.commit()
 
-    result = await session.exec(select(UserTenant).where(UserTenant.user_id == test_user.id)
+    result = await session.exec(select(TenantUser).where(TenantUser.user_id == test_user.id)
     )
     rows = result.all()
     assert len(rows) == 1
