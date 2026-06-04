@@ -7,6 +7,7 @@ Provides tenant management, user-tenant relationships, and tenant isolation.
 
 from .__version__ import __version__
 from .models.tenant_model import Tenant, TenantRead
+from .models.bases import TenantAuditBaseModel, TenantBaseModel
 from .middleware.tenant_middleware import TenantMiddleware
 from .databases.tenant_db_factory import (
     create_tenant_database,
@@ -45,6 +46,8 @@ __all__ = [
     "__version__",
     "Tenant",
     "TenantRead",
+    "TenantAuditBaseModel",
+    "TenantBaseModel",
     "TenantMiddleware",
     "get_current_tenant",
     "get_current_user",
