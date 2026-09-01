@@ -67,6 +67,7 @@ tenant2fast_fastapi = [
     "seeders/manifest.json",
     "seeders/dev/*.json",
     "seeders/prod/*.json",
+    "skills/*.md",
 ]
 
 [tool.pytest.ini_options]
