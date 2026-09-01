@@ -7,7 +7,7 @@ description: >
   package. Trigger: working on or with tenants2fast-fastapi.
 metadata:
   author: AngelDanielSanchezCastillo
-  version: "1.0"
+  version: "1.1"
 allowed-tools: Read, Edit, Write, Glob, Grep, Bash, Task
 ---
 
@@ -15,8 +15,8 @@ allowed-tools: Read, Edit, Write, Glob, Grep, Bash, Task
 
 Multi-tenancy layer: each tenant gets an **isolated PostgreSQL database**;
 JWT-aware middleware resolves the tenant; tenant-scoped RBAC gates routers.
-Bases on `pgsqlasync2fast-fastapi` for connection management and
-`rbac2fast_core` protocols for services.
+Bases on `pgsqlasync2fast-fastapi` (connections) and `rbac2fast_core`
+(service protocols).
 
 ## Import name (quirk)
 
@@ -25,9 +25,9 @@ Bases on `pgsqlasync2fast-fastapi` for connection management and
 
 ## Public API (core)
 
-- Routers: `get_tenant_routers()` — combined tenants/users/roles/permissions APIRouters.
-- Dependencies: `get_current_tenant`, `get_current_user`, `get_current_tenant_user`,
-  `get_tenant_db_session` (yields AsyncSession for the tenant engine),
+- Routers: `get_tenant_routers()` — combined tenants/users/roles/permissions.
+- Deps: `get_current_tenant`, `get_current_user`, `get_current_tenant_user`,
+  `get_tenant_db_session` (AsyncSession for the tenant engine),
   `has_tenant_permission(route, method)`, `has_tenant_role(name)`.
 - DB: `create_tenant_database`, `get_tenant_engine`, `initialize_tenant_schema`,
   `load_tenant_by_id`.
@@ -36,16 +36,15 @@ Bases on `pgsqlasync2fast-fastapi` for connection management and
 ## Architecture
 
 - **Two registries**: auth-DB models (`Tenant`, `TenantUser`) extend `AuthModel`
-  from `oauth2fast_fastapi.models.bases`; tenant-DB models (`User`, `Role`,
-  `Category`, `Permission`, `Route`, `RoleUser`, `PermissionRole`,
-  `PermissionRoute`, `PermissionUser`) extend `TenantBaseModel` and register on
-  the exclusive **`tenant_metadata`** registry.
-- New app models MUST inherit `TenantBaseModel` to be created per-tenant; auth
-  models inherit `AuthModel`.
+  (from `oauth2fast_fastapi.models.bases`); tenant-DB models (`User`, `Role`,
+  `Category`, `Permission`, `Route`, joins) extend `TenantBaseModel` and
+  register on the exclusive **`tenant_metadata`** registry.
+- **New app models MUST inherit `TenantBaseModel`** to be created per-tenant;
+  auth models inherit `AuthModel`.
 - Per-tenant engines register in the pgsqlasync2fast manager under
-  `tenant_{tenant_id}`.
-- Services implement `rbac2fast_core` protocols as singletons
-  (`tenant_access_service`, `tenant_role_service`, `tenant_permission_service`).
+  `tenant_{tenant_id}`; services implement `rbac2fast_core` protocols as
+  singletons (`tenant_access_service`, `tenant_role_service`,
+  `tenant_permission_service`).
 
 ## Wiring
 
@@ -61,29 +60,28 @@ validate `is_active` → `set_tenant_context(tenant)` + register engine.
 
 ## RBAC
 
-- `has_tenant_permission("/users", "POST")` factory; if path omitted it
-  auto-detects via `request.scope["route"].path`.
+- `has_tenant_permission("/users", "POST")` factory; path omitted →
+  auto-detect via `request.scope["route"].path`.
 - **Deny by default**. Resolution: `PermissionUser` overrides first (deny wins)
-  → role permissions → `evaluate_route_access` regex-matches `{param}` patterns.
-- Redis cache `tenant:{id}:user:{id}:permissions`, TTL 300 (settings).
+  → role permissions → `evaluate_route_access` regex-matches `{param}`.
+- Redis cache `tenant:{id}:user:{id}:permissions`, TTL 300.
 - `has_tenant_role(name)` checks tenant-local role assignment.
 
 ## Migrations & seeders
 
-- **No Alembic**: `run_tenant_migrations(tenant_id)` =
-  `import_tenant_models()` then `tenant_metadata.create_all` on the tenant engine;
+- **No Alembic**: `run_tenant_migrations(tenant_id)` = `import_tenant_models()`
+  then `tenant_metadata.create_all` on the tenant engine;
   `run_all_tenant_migrations()` iterates active tenants from the auth DB.
 - Seeders: `SeederConfig(is_tenant_seeder=True, priority=70)`; manifest
-  `load_order` categories → roles → permissions; idempotent by explicit row `id`;
-  `seed_all_tenants(profile)` enumerates tenants from the auth DB.
+  `load_order` categories → roles → permissions; idempotent by row `id`.
 - The orchestrator `seed_all()` does **not** run tenant seeders — run them
   explicitly.
 
 ## Settings
 
-`TenantSettings`, env prefix `TENANT_`, nested `__`: `URL_PREFIX` (default
+`TenantSettings`, prefix `TENANT_`, nested `__`: `URL_PREFIX` (default
 "tenants"), `BASE_DB_CONNECTION` (default "tenant"), `MAX_TENANT_CONNECTIONS`
-(5), `REDIS_URL`, `REDIS_TTL` (300), `SUPERUSER_DB__*`, `DB_PREFIX` (see README).
+(5), `REDIS_URL`, `REDIS_TTL` (300), `SUPERUSER_DB__*`, `DB_PREFIX` (README).
 
 ## Conventions specific
 
@@ -95,8 +93,8 @@ validate `is_active` → `set_tenant_context(tenant)` + register engine.
 
 ## Stale docs to avoid
 
-- `require_permission` does NOT exist → use `has_tenant_permission`.
-- `Tenant2Read` does NOT exist → `TenantRead`.
+- `require_permission` → use `has_tenant_permission`.
+- `Tenant2Read` → `TenantRead`.
 - Seeder module is `services.tenant_rbac_seeder`, not `tenant2fast_fastapi.seeder`.
 
 ## Golden rule (inherited)
