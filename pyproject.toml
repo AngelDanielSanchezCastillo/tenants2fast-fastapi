@@ -29,7 +29,7 @@ classifiers = [
 dependencies = [
     # Pulls in pgsqlasync2fast-fastapi, mailing2fast-fastapi,
     # log2fast-fastapi, sqlmodel, fastapi, pydantic, etc. transitively.
-    "permissions2fast-fastapi>=0.8.2",
+    "permissions2fast-fastapi>=0.8.4",
 ]
 
 [dependency-groups]
