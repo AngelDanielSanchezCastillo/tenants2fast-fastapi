@@ -4,6 +4,8 @@
 
 Part of the **\*2fast-fastapi** ecosystem: [oauth2fast-fastapi](https://github.com/AngelDanielSanchezCastillo/oauth2fast-fastapi) → [permissions2fast-fastapi](https://github.com/AngelDanielSanchezCastillo/permissions2fast-fastapi) → **tenants2fast-fastapi**.
 
+> 📖 **Conventions reference**: this package follows the [2fast-handbook](https://github.com/AngelDanielSanchezCastillo/2fast-handbook) for ecosystem conventions (structure, versioning, README, commits, release).
+
 ---
 
 ## Features
