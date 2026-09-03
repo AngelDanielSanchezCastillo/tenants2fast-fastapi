@@ -20,7 +20,7 @@ from .tenant_rbac_seeder import seed_tenant_rbac
 from pgsqlasync2fast_fastapi.connection import get_manager
 
 
-async def create_tenant(tenant_data: TenantCreate) -> Tenant:
+async def create_tenant(tenant_data: TenantCreate, profile: str | None = None) -> Tenant:
     """
     Create a new tenant with database provisioning.
 
@@ -31,6 +31,14 @@ async def create_tenant(tenant_data: TenantCreate) -> Tenant:
     4. Initialize schema in tenant database
     5. Seed default RBAC data (Owner, Admin, Member)
     6. Cache tenant data
+
+    Args:
+        tenant_data: Tenant creation data
+        profile: Seed profile (e.g., "dev", "prod"). When None, uses
+            settings.seed_profile via seed_tenant_rbac.
+
+    Raises:
+        HTTPException(500) when RBAC seeding produces errors.
     """
     async with await get_manager().get_session("auth") as session:
         # Check if slug already exists
@@ -71,7 +79,14 @@ async def create_tenant(tenant_data: TenantCreate) -> Tenant:
             await initialize_tenant_schema(tenant.id)
 
             # Seed default RBAC data
-            await seed_tenant_rbac(tenant.id)
+            seed_result = await seed_tenant_rbac(tenant.id, profile)
+
+            # Surface seeding errors instead of silent success
+            if seed_result.get("errors"):
+                raise HTTPException(
+                    status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+                    detail=f"Tenant RBAC seeding errors: {seed_result['errors']}",
+                )
 
             # Cache tenant data
             await cache_tenant_data(

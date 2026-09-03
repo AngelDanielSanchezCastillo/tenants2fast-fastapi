@@ -34,6 +34,7 @@ from ..models.role_model import Role
 from ..models.permission_category_model import Category
 from ..models.permission_model import Permission
 from ..databases.tenant_db_factory import get_tenant_session
+from ..settings import settings
 
 logger = logging.getLogger(__name__)
 
@@ -329,17 +330,20 @@ async def _seed_table_idempotent(
 # ============================================================================
 
 
-async def seed_tenant_rbac(tenant_id: int):
+async def seed_tenant_rbac(tenant_id: int, profile: str | None = None):
     """
     Legacy seeding function for backward compatibility.
 
     Args:
         tenant_id: The tenant ID to seed
+        profile: Profile folder name (e.g., "dev", "prod").
+            When None, uses settings.seed_profile.
 
     Note:
         Prefer using seed(profile, tenant_id) for new code.
     """
-    return await seed("dev", tenant_id)
+    resolved_profile = profile or settings.seed_profile
+    return await seed(resolved_profile, tenant_id)
 
 
 # ============================================================================
