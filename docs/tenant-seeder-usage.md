@@ -58,14 +58,57 @@ async def reseed_all_tenants():
 
 ### Legacy Compatibility
 
-The original `seed_tenant_rbac(tenant_id)` function is still available:
+The original `seed_tenant_rbac(tenant_id)` function is still available, now
+profile-aware:
 
 ```python
 from tenant2fast_fastapi import seed_tenant_rbac
 
-# Legacy usage (still works)
+# Uses settings.seed_profile (default) — no hardcoded "dev"
 await seed_tenant_rbac(tenant_id=1)
+
+# Explicit profile overrides the setting
+await seed_tenant_rbac(tenant_id=1, profile="prod")
 ```
+
+### Profile Parameterization
+
+`seed_tenant_rbac(tenant_id, profile=None)` forwards
+`profile or settings.seed_profile` to `seed(profile, tenant_id)`. Set
+`TENANT_SEED_PROFILE` (or `SEED_PROFILE` via the app) to control the default
+profile for legacy callers.
+
+### create_tenant Error Surfacing
+
+`create_tenant(tenant_data, profile=None)` seeds the tenant RBAC after
+provisioning and now **surfaces seeding failures**. If `seed(...)` returns a
+non-empty `errors` list, it raises `HTTPException(500)` with
+`detail="Tenant RBAC seeding errors: ..."` instead of silently succeeding:
+
+```python
+from tenant2fast_fastapi.services.tenant_service import create_tenant
+
+# Raises HTTPException(500) if RBAC seeding fails
+tenant = await create_tenant(data, profile="prod")
+```
+
+### require_tenant_owner Dependency
+
+`require_tenant_owner()` is a reusable dependency that requires the
+tenant-local **OWNER** role and returns the tenant `User`. It deliberately
+ignores the binary `is_admin` flag — only a real OWNER role grants access:
+
+```python
+from fastapi import Depends
+from tenant2fast_fastapi import require_tenant_owner
+from tenant2fast_fastapi.models.user_model import User
+
+@router.delete("/settings")
+async def delete_settings(user: User = Depends(require_tenant_owner())):
+    ...
+```
+
+OWNER holder → allowed; non-OWNER (including `is_admin=True` without OWNER) → 403.
 
 ## Seeder Configuration
 

@@ -7,8 +7,8 @@ description: >
   package. Trigger: working on or with tenants2fast-fastapi.
 metadata:
   author: AngelDanielSanchezCastillo
-  version: "1.1"
-allowed-tools: Read, Edit, Write, Glob, Grep, Bash, Task
+  version: "2.0"
+  allowed-tools: Read, Edit, Write, Glob, Grep, Bash, Task
 ---
 
 ## Purpose
@@ -66,6 +66,11 @@ validate `is_active` → `set_tenant_context(tenant)` + register engine.
   → role permissions → `evaluate_route_access` regex-matches `{param}`.
 - Redis cache `tenant:{id}:user:{id}:permissions`, TTL 300.
 - `has_tenant_role(name)` checks tenant-local role assignment.
+- `require_tenant_owner()` factory resolves the tenant-local **OWNER** role via
+  `tenant_role_service.list_user_roles` and returns the tenant `User`; raises
+  403 when the caller lacks OWNER. The binary `is_admin` flag is **ignored**
+  — it never bypasses the OWNER requirement. Use it in place of `has_tenant_role("OWNER")`
+  when you need the owner identity back from the dependency.
 
 ## Migrations & seeders
 
@@ -74,6 +79,11 @@ validate `is_active` → `set_tenant_context(tenant)` + register engine.
   `run_all_tenant_migrations()` iterates active tenants from the auth DB.
 - Seeders: `SeederConfig(is_tenant_seeder=True, priority=70)`; manifest
   `load_order` categories → roles → permissions; idempotent by row `id`.
+- `seed_tenant_rbac(tenant_id, profile=None)` is **profile-aware** — it forwards
+  `profile or settings.seed_profile` to `seed(profile, tenant_id)` (no hardcoded
+  "dev"). `create_tenant(tenant_data, profile=None)` has the same profile param
+  and raises `HTTPException(500)` when seeding returns non-empty `errors`
+  instead of silently succeeding.
 - The orchestrator `seed_all()` does **not** run tenant seeders — run them
   explicitly.
 
