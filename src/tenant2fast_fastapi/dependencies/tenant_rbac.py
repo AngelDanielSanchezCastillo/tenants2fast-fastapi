@@ -143,6 +143,54 @@ def has_tenant_role(role_name: str):
     return _check
 
 
+def require_tenant_owner():
+    """
+    Dependency that requires the tenant-local OWNER role.
+
+    Resolves the OWNER role **inside the current tenant** via
+    ``tenant_role_service.list_user_roles`` and denies (403) when the current
+    tenant user does not hold it. The legacy binary ``is_admin`` flag is
+    deliberately ignored — it must NOT bypass the OWNER requirement.
+
+    Returns the tenant ``User`` record when the caller is the tenant owner.
+
+    Usage::
+
+        @router.delete("/settings")
+        async def delete_settings(
+            user: User = Depends(require_tenant_owner())
+        ):
+            ...
+    """
+    async def _check(
+        tenant: Annotated[Tenant, Depends(get_current_tenant)],
+        user: Annotated[AuthUser, Depends(get_current_user)],
+    ) -> User:
+        async with await get_tenant_session(tenant.id) as session:
+            tenant_user = await get_tenant_user_by_auth_id(user.id, session)
+            if not tenant_user:
+                raise HTTPException(
+                    status_code=status.HTTP_403_FORBIDDEN,
+                    detail="User is not registered in this tenant",
+                )
+
+            user_roles = await tenant_role_service.list_user_roles(
+                tenant_user.id, session
+            )
+
+        is_owner = any(r.name == "OWNER" for r in user_roles)
+
+        if not is_owner:
+            raise HTTPException(
+                status_code=status.HTTP_403_FORBIDDEN,
+                detail="Only the tenant owner can perform this action",
+            )
+
+        return tenant_user
+
+    return _check
+
+
 async def get_current_tenant_user(
     tenant: Tenant = Depends(get_current_tenant),
     user: AuthUser = Depends(get_current_user),

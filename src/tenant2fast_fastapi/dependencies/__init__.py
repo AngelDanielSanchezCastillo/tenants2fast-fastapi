@@ -10,7 +10,12 @@ from .tenant_context import (
     set_user_context,
     get_tenant_db_session,
 )
-from .tenant_rbac import has_tenant_permission, has_tenant_role, get_current_tenant_user
+from .tenant_rbac import (
+    has_tenant_permission,
+    has_tenant_role,
+    get_current_tenant_user,
+    require_tenant_owner,
+)
 
 __all__ = [
     "get_current_tenant",
@@ -21,6 +26,7 @@ __all__ = [
     "has_tenant_permission",
     "has_tenant_role",
     "get_current_tenant_user",
+    "require_tenant_owner",
     "set_tenant_context",
     "set_user_context",
     "get_tenant_db_session",
