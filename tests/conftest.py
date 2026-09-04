@@ -11,6 +11,11 @@ import pytest
 # Ensure the auth connection is treated as a superuser for database creation/dropping in tests
 os.environ["DB_CONNECTIONS__AUTH__IS_SUPERUSER"] = "true"
 
+# Fallback secrets so importing oauth2fast settings does not crash when no real
+# .env is present. setdefault honors an explicitly-provided env var. DB-backed
+# fixtures only connect when a real environment supplies credentials.
+os.environ.setdefault("SECRET_KEY", "test-secret-key-not-for-production")
+
 from typing import AsyncGenerator, Generator
 from sqlmodel.ext.asyncio.session import AsyncSession
 from sqlalchemy import text

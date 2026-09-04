@@ -7,7 +7,7 @@ description: >
   package. Trigger: working on or with tenants2fast-fastapi.
 metadata:
   author: AngelDanielSanchezCastillo
-  version: "2.0"
+  version: "2.1"
   allowed-tools: Read, Edit, Write, Glob, Grep, Bash, Task
 ---
 
@@ -86,6 +86,24 @@ validate `is_active` → `set_tenant_context(tenant)` + register engine.
   instead of silently succeeding.
 - The orchestrator `seed_all()` does **not** run tenant seeders — run them
   explicitly.
+
+## Route seeding (tenant manifest) — RBAC standardization D2
+
+- `RouteSpec(method, path, permission=None, roles=[], profile={"dev","prod"})`
+  and `seed_tenant_routes(session, manifest, profile="prod")` are exported from
+  the top-level package. This is the D2 home of the TENANT route+link inserter
+  (route / permission_routes / role rows) — the app slims to a declarative
+  manifest and calls the package seeder instead of re-implementing.
+- Route natural key is `path` + `method` (the tenant Route model has **no**
+  unique constraint on that pair; the seeder SELECTs by path+method and relies
+  on serial seeding for idempotency).
+- **Cover-all semantics**: a tenant route with empty `roles` defaults to the
+  tenant `OWNER` role (spec v3); explicit roles are honored when declared.
+- Profile-aware: dev-only tenant routes are excluded when running `prod`.
+- Idempotent via the shared `pgsqlasync2fast.insert_if_missing` primitive.
+  Reuses the package's per-tenant pattern (does NOT use `register_seeder`).
+- One `AsyncSession` per tenant DB — the caller iterates tenants and passes each
+  tenant's session (see the app's reseed wiring).
 
 ## Settings
 

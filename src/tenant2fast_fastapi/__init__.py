@@ -43,6 +43,9 @@ from .services.tenant_rbac_seeder import (
     seed_tenant_rbac,
 )
 
+# TENANT route+link seeding (RBAC standardization D2)
+from .services.route_seeder import RouteSpec, seed_tenant_routes
+
 __all__ = [
     "__version__",
     "Tenant",
@@ -70,4 +73,7 @@ __all__ = [
     "seed",
     "seed_all_tenants",
     "seed_tenant_rbac",
+    # TENANT route+link seeding (RBAC standardization D2)
+    "RouteSpec",
+    "seed_tenant_routes",
 ]
