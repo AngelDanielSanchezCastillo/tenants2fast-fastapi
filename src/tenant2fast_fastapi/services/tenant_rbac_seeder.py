@@ -35,6 +35,8 @@ from ..models.permission_category_model import Category
 from ..models.permission_model import Permission
 from ..databases.tenant_db_factory import get_tenant_session
 from ..settings import settings
+from permissions2fast_fastapi.services.route_seeder import seed_global_routes
+from .route_seeder import seed_tenant_routes
 
 logger = logging.getLogger(__name__)
 
@@ -261,6 +263,130 @@ async def seed_all_tenants(profile: str) -> Dict[str, Any]:
     return summary
 
 
+# ============================================================================
+# RBAC Re-Seed Orchestration (multi-tenant platform service)
+# ============================================================================
+
+
+async def reseed_all_rbac(
+    profile: str,
+    global_manifest: list,
+    tenant_manifest: list,
+    *,
+    active_only: bool = True,
+) -> dict[str, Any]:
+    """
+    Re-seed RBAC for a multi-tenant deployment (GLOBAL + TENANT planes).
+
+    This is the reusable platform orchestration a multi-tenant client calls at
+    boot with its own declarative manifests:
+
+    1. GLOBAL routes are seeded on the auth DB via
+       ``permissions2fast_fastapi.seed_global_routes`` (auth engine "auth").
+    2. Active tenants are enumerated from the auth DB (``active_only`` filters
+       ``Tenant.is_active``).
+    3. For each tenant: ``seed(profile, tenant_id)`` (roles, categories,
+       permissions + OWNER grant) and then
+       ``tenant2fast_fastapi.seed_tenant_routes`` on that tenant's DB.
+    4. Per-tenant failures are logged and non-fatal (the loop continues).
+
+    Args:
+        profile: Active profile (e.g. ``"dev"`` or ``"prod"``).
+        global_manifest: List of permissions2fast ``RouteSpec`` (GLOBAL plane).
+        tenant_manifest: List of tenants2fast ``RouteSpec`` (TENANT plane).
+        active_only: When True (default) only ``Tenant.is_active == True``
+            tenants are re-seeded; when False every tenant is included.
+
+    Returns:
+        Summary dict: ``total``, ``succeeded``, ``failed``, ``errors``,
+        ``global_routes``, ``tenant_routes``.
+    """
+    from pgsqlasync2fast_fastapi.connection import get_manager
+    from sqlmodel import select
+
+    from ..models.tenant_model import Tenant
+
+    summary: dict[str, Any] = {
+        "total": 0,
+        "succeeded": 0,
+        "failed": 0,
+        "errors": [],
+        "global_routes": 0,
+        "tenant_routes": 0,
+    }
+
+    try:
+        # Session de auth (misma vía que seed_all_tenants: manager "auth").
+        manager = get_manager()
+        auth_engine = manager.get_engine("auth")
+
+        async with AsyncSession(auth_engine) as session:
+            # 1. GLOBAL routes -> permissions2fast sobre la BD auth (profile-aware).
+            try:
+                gresult = await seed_global_routes(
+                    session, global_manifest, profile=profile
+                )
+                await session.commit()
+                summary["global_routes"] = gresult["routes"]
+            except Exception as exc:
+                msg = f"Global manifest seeding failed: {exc}"
+                logger.exception(msg)
+                summary["errors"].append(msg)
+
+            # 2. Enumerar tenants (filtro activos cuando active_only=True).
+            stmt = select(Tenant)
+            if active_only:
+                stmt = stmt.where(Tenant.is_active.is_(True))
+            result = await session.exec(stmt)
+            tenants = result.all()
+            summary["total"] = len(tenants)
+
+            if not tenants:
+                logger.info("No tenants found for RBAC re-seed")
+                return summary
+
+            logger.info(
+                f"RBAC re-seed: {len(tenants)} tenants with profile '{profile}'"
+            )
+
+            # 3. Por cada tenant: seed() RBAC + rutas TENANT en su BD.
+            for tenant in tenants:
+                try:
+                    seed_result = await seed(profile, tenant.id)
+                    if seed_result.get("errors"):
+                        logger.warning(
+                            f"Tenant {tenant.id}: seed() reported errors: "
+                            f"{seed_result['errors']}"
+                        )
+
+                    async with await get_tenant_session(tenant.id) as tsession:
+                        tresult = await seed_tenant_routes(
+                            tsession, tenant_manifest, profile=profile
+                        )
+                        await tsession.commit()
+                        summary["tenant_routes"] += tresult["tenant_routes"]
+
+                    summary["succeeded"] += 1
+                    logger.debug(f"RBAC re-seed OK for tenant {tenant.id}")
+
+                except Exception as exc:
+                    # Fallo por tenant: se registra y se continúa con el siguiente.
+                    msg = f"Tenant {tenant.id}: {exc}"
+                    logger.exception(f"RBAC re-seed FAILED — {msg}")
+                    summary["failed"] += 1
+                    summary["errors"].append(msg)
+
+    except Exception as exc:
+        logger.error(f"Failed to enumerate tenants: {exc}")
+        summary["error"] = str(exc)
+
+    logger.info(
+        f"🏁 RBAC re-seed complete: {summary['succeeded']}/{summary['total']} "
+        f"succeeded, {summary['failed']} failed"
+    )
+    return summary
+
+
 def _get_model_class(table_name: str):
     """Map table name to SQLModel class."""
     mapping = {
@@ -355,4 +481,5 @@ __all__ = [
     "seed",
     "seed_all_tenants",
     "seed_tenant_rbac",  # Legacy compatibility
+    "reseed_all_rbac",
 ]

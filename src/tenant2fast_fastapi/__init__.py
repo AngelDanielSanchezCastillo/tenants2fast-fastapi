@@ -41,6 +41,7 @@ from .services.tenant_rbac_seeder import (
     seed_all_tenants,
     get_seeder_config,
     seed_tenant_rbac,
+    reseed_all_rbac,
 )
 
 # TENANT route+link seeding (RBAC standardization D2)
@@ -73,6 +74,7 @@ __all__ = [
     "seed",
     "seed_all_tenants",
     "seed_tenant_rbac",
+    "reseed_all_rbac",
     # TENANT route+link seeding (RBAC standardization D2)
     "RouteSpec",
     "seed_tenant_routes",
