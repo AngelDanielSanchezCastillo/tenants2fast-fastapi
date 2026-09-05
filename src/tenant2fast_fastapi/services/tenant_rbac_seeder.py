@@ -36,6 +36,7 @@ from ..models.permission_model import Permission
 from ..databases.tenant_db_factory import get_tenant_session
 from ..settings import settings
 from permissions2fast_fastapi.services.route_seeder import seed_global_routes
+from pgsqlasync2fast_fastapi.seeder import sync_table_sequence
 from .route_seeder import seed_tenant_routes
 
 logger = logging.getLogger(__name__)
@@ -447,6 +448,8 @@ async def _seed_table_idempotent(
             await session.rollback()
             logger.error(f"Failed to insert row in table '{table_name}': {e}")
             raise
+
+    await sync_table_sequence(session, model_class)
 
     return rows_inserted, rows_skipped
 
