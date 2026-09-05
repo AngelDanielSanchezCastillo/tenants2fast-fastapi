@@ -381,10 +381,16 @@ async def reseed_all_rbac(
         logger.error(f"Failed to enumerate tenants: {exc}")
         summary["error"] = str(exc)
 
-    logger.info(
-        f"🏁 RBAC re-seed complete: {summary['succeeded']}/{summary['total']} "
-        f"succeeded, {summary['failed']} failed"
-    )
+    if summary["failed"] == 0:
+        logger.info(
+            f"🏁 RBAC re-seed complete: {summary['succeeded']}/"
+            f"{summary['total']} succeeded"
+        )
+    else:
+        logger.warning(
+            f"🏁 RBAC re-seed complete: {summary['succeeded']}/"
+            f"{summary['total']} succeeded, {summary['failed']} failed"
+        )
     return summary
 
 
