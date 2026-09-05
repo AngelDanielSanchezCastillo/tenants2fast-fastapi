@@ -56,6 +56,56 @@ async def reseed_all_tenants():
         print(f"  {status} Tenant {result['tenant_id']}: {result['status']}")
 ```
 
+### Full RBAC Re-Seed (routes + links) — `reseed_all_rbac`
+
+`reseed_all_rbac(profile, global_manifest, tenant_manifest, *, active_only=True)`
+is the **reusable platform orchestration** for a multi-tenant deployment: it
+seeds GLOBAL routes on the auth DB (via permissions2fast `seed_global_routes`)
+and, for each tenant, runs the RBAC seeder plus the TENANT routes on that
+tenant's DB (via `seed_tenant_routes`). A multi-tenant app calls this at boot
+with its own declarative manifests instead of owning the orchestration itself:
+
+```python
+from permissions2fast_fastapi import RouteSpec as GlobalRouteSpec
+from tenant2fast_fastapi import RouteSpec as TenantRouteSpec, reseed_all_rbac
+
+# The app's declarative manifests (two typed lists, package RouteSpec types).
+global_manifest = [
+    GlobalRouteSpec(
+        method="POST",
+        path="/register-user",
+        permission="register_user",
+        roles=["Admin", "SuperAdmin"],
+        profile={"dev", "prod"},
+    ),
+]
+tenant_manifest = [
+    TenantRouteSpec(
+        method="POST", path="/tenant/users/",
+        permission=None, roles=[],  # cover-all -> OWNER
+        profile={"dev", "prod"},
+    ),
+]
+
+async def boot_reseed():
+    summary = await reseed_all_rbac("prod", global_manifest, tenant_manifest)
+    print(
+        f"Tenants: {summary['succeeded']}/{summary['total']} OK, "
+        f"{summary['failed']} failed"
+    )
+    print(f"GLOBAL routes: {summary['global_routes']}, "
+          f"TENANT routes: {summary['tenant_routes']}")
+```
+
+Behavior:
+- `global_manifest` is a list of **permissions2fast** `RouteSpec` (GLOBAL plane);
+  `tenant_manifest` is a list of **tenants2fast** `RouteSpec` (TENANT plane).
+- `active_only=True` (default) re-seeds only `Tenant.is_active == True`;
+  `False` includes every tenant.
+- Per-tenant failures are logged and non-fatal — the loop continues.
+- Returns a summary dict with `total`, `succeeded`, `failed`, `errors`,
+  `global_routes`, `tenant_routes`.
+
 ### Legacy Compatibility
 
 The original `seed_tenant_rbac(tenant_id)` function is still available, now

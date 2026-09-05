@@ -7,7 +7,7 @@ description: >
   package. Trigger: working on or with tenants2fast-fastapi.
 metadata:
   author: AngelDanielSanchezCastillo
-  version: "2.1"
+  version: "2.2"
   allowed-tools: Read, Edit, Write, Glob, Grep, Bash, Task
 ---
 
@@ -31,7 +31,12 @@ Bases on `pgsqlasync2fast-fastapi` (connections) and `rbac2fast_core`
   `has_tenant_permission(route, method)`, `has_tenant_role(name)`.
 - DB: `create_tenant_database`, `get_tenant_engine`, `initialize_tenant_schema`,
   `load_tenant_by_id`.
-- Seeders: `get_seeder_config`, `seed(profile, tenant_id)`, `seed_all_tenants(profile)`.
+- Seeders: `get_seeder_config`, `seed(profile, tenant_id)`, `seed_all_tenants(profile)`,
+  `reseed_all_rbac(profile, global_manifest, tenant_manifest, *, active_only=True)`
+  (multi-tenant RBAC re-seed orchestration: GLOBAL routes on the auth DB via
+  permissions2fast `seed_global_routes`, then per-tenant `seed()` +
+  `seed_tenant_routes`; per-tenant failures non-fatal, returns a summary dict
+  with `total`/`succeeded`/`failed`/`errors`/`global_routes`/`tenant_routes`).
 
 ## Architecture
 
@@ -104,6 +109,23 @@ validate `is_active` → `set_tenant_context(tenant)` + register engine.
   Reuses the package's per-tenant pattern (does NOT use `register_seeder`).
 - One `AsyncSession` per tenant DB — the caller iterates tenants and passes each
   tenant's session (see the app's reseed wiring).
+
+## Boot re-seed orchestration (reseed_all_rbac) — RBAC standardization D4
+
+- `reseed_all_rbac(profile, global_manifest, tenant_manifest, *, active_only=True)`
+  is the **reusable platform orchestration** a multi-tenant client calls at boot
+  with its own declarative manifests; the app no longer owns this sequence.
+- `global_manifest` is a list of **permissions2fast** `RouteSpec` (routes seeded
+  on the auth DB via `seed_global_routes`); `tenant_manifest` is a list of
+  **tenants2fast** `RouteSpec` (seeded per tenant DB via `seed_tenant_routes`).
+  Do NOT introduce a third RouteSpec definition — reuse the package types.
+- `active_only=True` re-seeds only `Tenant.is_active == True`; `False` includes
+  every tenant.
+- Per-tenant failures are logged and non-fatal (the loop continues); the return
+  summary carries `total`, `succeeded`, `failed`, `errors`, `global_routes`,
+  `tenant_routes`.
+- The auth session comes from the pgsqlasync2fast manager engine `"auth"`
+  (same path as `seed_all_tenants`).
 
 ## Settings
 
