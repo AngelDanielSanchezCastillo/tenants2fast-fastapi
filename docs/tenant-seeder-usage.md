@@ -56,16 +56,109 @@ async def reseed_all_tenants():
         print(f"  {status} Tenant {result['tenant_id']}: {result['status']}")
 ```
 
+### Full RBAC Re-Seed (routes + links) — `reseed_all_rbac`
+
+`reseed_all_rbac(profile, global_manifest, tenant_manifest, *, active_only=True)`
+is the **reusable platform orchestration** for a multi-tenant deployment: it
+seeds GLOBAL routes on the auth DB (via permissions2fast `seed_global_routes`)
+and, for each tenant, runs the RBAC seeder plus the TENANT routes on that
+tenant's DB (via `seed_tenant_routes`). A multi-tenant app calls this at boot
+with its own declarative manifests instead of owning the orchestration itself:
+
+```python
+from permissions2fast_fastapi import RouteSpec as GlobalRouteSpec
+from tenant2fast_fastapi import RouteSpec as TenantRouteSpec, reseed_all_rbac
+
+# The app's declarative manifests (two typed lists, package RouteSpec types).
+global_manifest = [
+    GlobalRouteSpec(
+        method="POST",
+        path="/register-user",
+        permission="register_user",
+        roles=["Admin", "SuperAdmin"],
+        profile={"dev", "prod"},
+    ),
+]
+tenant_manifest = [
+    TenantRouteSpec(
+        method="POST", path="/tenant/users/",
+        permission=None, roles=[],  # cover-all -> OWNER
+        profile={"dev", "prod"},
+    ),
+]
+
+async def boot_reseed():
+    summary = await reseed_all_rbac("prod", global_manifest, tenant_manifest)
+    print(
+        f"Tenants: {summary['succeeded']}/{summary['total']} OK, "
+        f"{summary['failed']} failed"
+    )
+    print(f"GLOBAL routes: {summary['global_routes']}, "
+          f"TENANT routes: {summary['tenant_routes']}")
+```
+
+Behavior:
+- `global_manifest` is a list of **permissions2fast** `RouteSpec` (GLOBAL plane);
+  `tenant_manifest` is a list of **tenants2fast** `RouteSpec` (TENANT plane).
+- `active_only=True` (default) re-seeds only `Tenant.is_active == True`;
+  `False` includes every tenant.
+- Per-tenant failures are logged and non-fatal — the loop continues.
+- Returns a summary dict with `total`, `succeeded`, `failed`, `errors`,
+  `global_routes`, `tenant_routes`.
+
 ### Legacy Compatibility
 
-The original `seed_tenant_rbac(tenant_id)` function is still available:
+The original `seed_tenant_rbac(tenant_id)` function is still available, now
+profile-aware:
 
 ```python
 from tenant2fast_fastapi import seed_tenant_rbac
 
-# Legacy usage (still works)
+# Uses settings.seed_profile (default) — no hardcoded "dev"
 await seed_tenant_rbac(tenant_id=1)
+
+# Explicit profile overrides the setting
+await seed_tenant_rbac(tenant_id=1, profile="prod")
 ```
+
+### Profile Parameterization
+
+`seed_tenant_rbac(tenant_id, profile=None)` forwards
+`profile or settings.seed_profile` to `seed(profile, tenant_id)`. Set
+`TENANT_SEED_PROFILE` (or `SEED_PROFILE` via the app) to control the default
+profile for legacy callers.
+
+### create_tenant Error Surfacing
+
+`create_tenant(tenant_data, profile=None)` seeds the tenant RBAC after
+provisioning and now **surfaces seeding failures**. If `seed(...)` returns a
+non-empty `errors` list, it raises `HTTPException(500)` with
+`detail="Tenant RBAC seeding errors: ..."` instead of silently succeeding:
+
+```python
+from tenant2fast_fastapi.services.tenant_service import create_tenant
+
+# Raises HTTPException(500) if RBAC seeding fails
+tenant = await create_tenant(data, profile="prod")
+```
+
+### require_tenant_owner Dependency
+
+`require_tenant_owner()` is a reusable dependency that requires the
+tenant-local **OWNER** role and returns the tenant `User`. It deliberately
+ignores the binary `is_admin` flag — only a real OWNER role grants access:
+
+```python
+from fastapi import Depends
+from tenant2fast_fastapi import require_tenant_owner
+from tenant2fast_fastapi.models.user_model import User
+
+@router.delete("/settings")
+async def delete_settings(user: User = Depends(require_tenant_owner())):
+    ...
+```
+
+OWNER holder → allowed; non-OWNER (including `is_admin=True` without OWNER) → 403.
 
 ## Seeder Configuration
 

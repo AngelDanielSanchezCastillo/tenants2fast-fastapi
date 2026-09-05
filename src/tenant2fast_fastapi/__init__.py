@@ -20,6 +20,7 @@ from .dependencies import (
     has_tenant_permission,
     has_tenant_role,
     get_current_tenant_user,
+    require_tenant_owner,
     load_tenant_by_id,
     get_tenant_context,
     get_user_context,
@@ -40,7 +41,11 @@ from .services.tenant_rbac_seeder import (
     seed_all_tenants,
     get_seeder_config,
     seed_tenant_rbac,
+    reseed_all_rbac,
 )
+
+# TENANT route+link seeding (RBAC standardization D2)
+from .services.route_seeder import RouteSpec, seed_tenant_routes
 
 __all__ = [
     "__version__",
@@ -54,6 +59,7 @@ __all__ = [
     "has_tenant_permission",
     "has_tenant_role",
     "get_current_tenant_user",
+    "require_tenant_owner",
     "load_tenant_by_id",
     "get_tenant_context",
     "get_user_context",
@@ -68,4 +74,8 @@ __all__ = [
     "seed",
     "seed_all_tenants",
     "seed_tenant_rbac",
+    "reseed_all_rbac",
+    # TENANT route+link seeding (RBAC standardization D2)
+    "RouteSpec",
+    "seed_tenant_routes",
 ]

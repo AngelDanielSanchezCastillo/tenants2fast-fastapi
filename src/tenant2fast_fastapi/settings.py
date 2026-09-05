@@ -41,6 +41,9 @@ class TenantSettings(BaseSettings):
     redis_url: str | None = None
     redis_ttl: int = 300  # Default 5 minutes
 
+    # RBAC seed profile — used by seed_tenant_rbac when no explicit profile is given
+    seed_profile: str = "dev"
+
 
 try:
     settings = TenantSettings()

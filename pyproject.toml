@@ -30,6 +30,8 @@ dependencies = [
     # Pulls in pgsqlasync2fast-fastapi, mailing2fast-fastapi,
     # log2fast-fastapi, sqlmodel, fastapi, pydantic, etc. transitively.
     "permissions2fast-fastapi>=0.8.4",
+    # Direct import of the shared insert_if_missing primitive (v0.4.0).
+    "pgsqlasync2fast-fastapi>=0.4.0",
 ]
 
 [dependency-groups]
@@ -47,6 +49,7 @@ test = [
     "pytest-cov>=4.0.0",
     "httpx>=0.24.0",
     "python-dotenv>=1.0.0",
+    "aiosqlite",
 ]
 
 [project.urls]
