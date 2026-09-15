@@ -7,10 +7,10 @@ per-tenant DB idempotently, instead of the app hand-rolling its own inserter.
 
 TENANT rules:
 - Route natural key is ``path`` + ``method``.
-- cover-all routes (no explicit roles) default to the tenant OWNER role.
+- cover-all routes (no explicit roles) default to the tenant Owner role.
 - explicit roles are honored when declared.
 - routes with a ``permission`` create a ``PermissionRole`` grant per effective
-  role (declared roles, or OWNER for cover-all), idempotently.
+  role (declared roles, or Owner for cover-all), idempotently.
 - profile-aware: dev-only routes are excluded when running ``prod``.
 - idempotent via the shared ``pgsqlasync2fast.insert_if_missing`` primitive.
 
@@ -30,8 +30,11 @@ from tenant2fast_fastapi.models.role_model import Role
 from tenant2fast_fastapi.models.route_model import Route
 
 # Cover-all semantics (spec v3): a tenant route without explicit roles is
-# implicitly granted to the tenant OWNER role.
-DEFAULT_TENANT_ROLE = "OWNER"
+# implicitly granted to the tenant Owner role. "Owner" is the SINGLE canonical
+# cover-all role (seeded id=1); the legacy "OWNER" name is cleaned up by
+# utils.tenant_owner_cleanup pre-boot in 0.7.4. Keeping one point of truth
+# avoids creating a duplicate role for the same owner.
+DEFAULT_TENANT_ROLE = "Owner"
 
 
 @dataclass(frozen=True, slots=True)
@@ -88,7 +91,7 @@ async def seed_tenant_routes(
 
 
 def _effective_roles(spec: RouteSpec) -> list[str]:
-    """Cover-all tenant routes default to OWNER; otherwise the explicit roles."""
+    """Cover-all tenant routes default to Owner; otherwise the explicit roles."""
     if not spec.roles:
         return [DEFAULT_TENANT_ROLE]
     return list(spec.roles)

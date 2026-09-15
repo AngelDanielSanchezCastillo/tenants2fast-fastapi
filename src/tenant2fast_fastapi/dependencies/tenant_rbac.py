@@ -145,12 +145,15 @@ def has_tenant_role(role_name: str):
 
 def require_tenant_owner():
     """
-    Dependency that requires the tenant-local OWNER role.
+    Dependency that requires the tenant-local Owner role.
 
-    Resolves the OWNER role **inside the current tenant** via
+    Resolves the Owner role **inside the current tenant** via
     ``tenant_role_service.list_user_roles`` and denies (403) when the current
-    tenant user does not hold it. The legacy binary ``is_admin`` flag is
-    deliberately ignored — it must NOT bypass the OWNER requirement.
+    tenant user does not hold it. The role name matched is the canonical
+    cover-all ``"Owner"`` (seeded id=1); the legacy uppercase ``"OWNER"`` no
+    longer satisfies the guard since the 0.7.4 dedupe. The legacy binary
+    ``is_admin`` flag is deliberately ignored — it must NOT bypass the Owner
+    requirement.
 
     Returns the tenant ``User`` record when the caller is the tenant owner.
 
@@ -178,7 +181,7 @@ def require_tenant_owner():
                 tenant_user.id, session
             )
 
-        is_owner = any(r.name == "OWNER" for r in user_roles)
+        is_owner = any(r.name == "Owner" for r in user_roles)
 
         if not is_owner:
             raise HTTPException(

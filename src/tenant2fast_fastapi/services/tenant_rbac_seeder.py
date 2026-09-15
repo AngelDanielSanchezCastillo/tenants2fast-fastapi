@@ -287,7 +287,7 @@ async def reseed_all_rbac(
     2. Active tenants are enumerated from the auth DB (``active_only`` filters
        ``Tenant.is_active``).
     3. For each tenant: ``seed(profile, tenant_id)`` (roles, categories,
-       permissions + OWNER grant) and then
+       permissions + Owner grant) and then
        ``tenant2fast_fastapi.seed_tenant_routes`` on that tenant's DB.
     4. Per-tenant failures are logged and non-fatal (the loop continues).
 
