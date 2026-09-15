@@ -211,12 +211,12 @@ async def test_reseed_all_rbac_seeds_globals_and_active_tenants(monkeypatch):
     assert names == ["GET /tenants/control"]
     assert "Admin" in role_names
 
-    # TENANT route landed in the shared tenant DB (cover-all -> OWNER).
+    # TENANT route landed in the shared tenant DB (cover-all -> Owner).
     async with tenant_engine.connect() as conn:
         paths = [p[0] for p in (await conn.execute(text("SELECT path FROM routes"))).all()]
         tenant_roles = {r[0] for r in (await conn.execute(text("SELECT name FROM roles"))).all()}
     assert paths == ["/tenant/users/"]
-    assert "OWNER" in tenant_roles
+    assert "Owner" in tenant_roles
 
     await auth_engine.dispose()
     await tenant_engine.dispose()

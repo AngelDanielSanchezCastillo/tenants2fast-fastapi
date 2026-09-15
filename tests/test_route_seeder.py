@@ -7,11 +7,11 @@ seeded into each per-tenant DB idempotently (insert-if-missing by natural
 key; the tenant Route key is ``path``+``method``).
 
 TENANT rules:
-- cover-all routes (no explicit roles) default to the tenant OWNER role.
+- cover-all routes (no explicit roles) default to the tenant Owner role.
 - explicit roles are honored when declared.
 - profile-aware (dev/prod): PROD must not receive dev-only tenant routes.
 - routes with a `permission` create a `PermissionRole` grant per effective role
-  (declared roles, or OWNER for cover-all); idempotent via insert-if-missing.
+  (declared roles, or Owner for cover-all); idempotent via insert-if-missing.
 
 Run with:
   cd /Volumes/Desarrollo/Repos/Github/tenants2fast-fastapi \
@@ -56,7 +56,7 @@ def _spec(method, path, permission, roles, profile):
 
 @pytest.mark.asyncio
 async def test_seed_tenant_routes_cover_all_defaults_to_owner():
-    """Tenant cover-all route (no roles) -> OWNER role, idempotent."""
+    """Tenant cover-all route (no roles) -> Owner role, idempotent."""
     from sqlalchemy import text
 
     from tenant2fast_fastapi.services.route_seeder import seed_tenant_routes
@@ -74,9 +74,8 @@ async def test_seed_tenant_routes_cover_all_defaults_to_owner():
             roles = (await conn.execute(text("SELECT name FROM roles"))).all()
 
         assert [(r[0], r[1]) for r in routes] == [("/tenant/users/", "POST")]
-        # Cover-all defaulted to the OWNER role
-        assert [r[0] for r in roles] == ["OWNER"]
-        assert "OWNER" in [r[0] for r in roles]
+        # Cover-all defaulted to the Owner role (dedupe: no legacy "OWNER")
+        assert [r[0] for r in roles] == ["Owner"]
         assert summary["tenant_routes"] == 1
 
         # --- Idempotency: second call does not duplicate ---
@@ -92,7 +91,7 @@ async def test_seed_tenant_routes_cover_all_defaults_to_owner():
 
 @pytest.mark.asyncio
 async def test_seed_tenant_routes_explicit_roles():
-    """Tenant route with explicit roles -> those roles created (not OWNER)."""
+    """Tenant route with explicit roles -> those roles created (not Owner)."""
     from sqlalchemy import text
 
     from tenant2fast_fastapi.services.route_seeder import seed_tenant_routes
@@ -148,7 +147,7 @@ async def test_seed_tenant_routes_permission_link():
     engine = await _tenant_engine()
     async with AsyncSession(engine) as session:
         manifest = [
-            _spec("PATCH", "/tenant/users/{user_id}", "user_edit", ["OWNER"], {"dev", "prod"}),
+            _spec("PATCH", "/tenant/users/{user_id}", "user_edit", ["Owner"], {"dev", "prod"}),
         ]
         summary = await seed_tenant_routes(session, manifest, "dev")
         await session.commit()
@@ -199,7 +198,7 @@ async def test_seed_tenant_routes_creates_role_permission_grants():
 
 @pytest.mark.asyncio
 async def test_seed_tenant_routes_owner_cover_all_grant():
-    """Cover-all route (roles=[]) + permission -> OWNER PermissionRole grant."""
+    """Cover-all route (roles=[]) + permission -> Owner PermissionRole grant."""
     from sqlalchemy import text
 
     from tenant2fast_fastapi.services.route_seeder import seed_tenant_routes
@@ -223,7 +222,7 @@ async def test_seed_tenant_routes_owner_cover_all_grant():
                 )
             ).all()
 
-        assert [tuple(g) for g in grants] == [("OWNER", "clients:read")]
+        assert [tuple(g) for g in grants] == [("Owner", "clients:read")]
         assert summary["tenant_grants"] == 1
     await engine.dispose()
 
@@ -262,7 +261,7 @@ async def test_seed_tenant_routes_no_permission_creates_no_grants():
     engine = await _tenant_engine()
     async with AsyncSession(engine) as session:
         manifest = [
-            _spec("POST", "/tenant/users/", None, ["OWNER"], {"dev", "prod"}),
+            _spec("POST", "/tenant/users/", None, ["Owner"], {"dev", "prod"}),
         ]
         summary = await seed_tenant_routes(session, manifest, "dev")
         await session.commit()
@@ -271,7 +270,7 @@ async def test_seed_tenant_routes_no_permission_creates_no_grants():
             roles = (await conn.execute(text("SELECT name FROM roles"))).all()
             n_grants = (await conn.execute(text("SELECT COUNT(*) FROM permission_roles"))).scalar()
 
-        assert [r[0] for r in roles] == ["OWNER"]
+        assert [r[0] for r in roles] == ["Owner"]
         assert n_grants == 0
         assert summary["tenant_grants"] == 0
     await engine.dispose()
