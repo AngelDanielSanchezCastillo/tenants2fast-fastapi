@@ -115,7 +115,10 @@ class PermissionResponse(BaseModel):
     """Response for permission data."""
     id: int
     name: str
-    permission_category_id: int
+    # Null-safe: permissions without a seeded category serialize as null
+    # instead of failing validation (staging regression: 500 on GET
+    # /tenants/permissions/).
+    permission_category_id: int | None = None
 
 
 class PermissionListResponse(BaseModel):
