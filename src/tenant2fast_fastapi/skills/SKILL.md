@@ -96,12 +96,20 @@ validate `is_active` → `set_tenant_context(tenant)` + register engine.
 
 - `RouteSpec(method, path, permission=None, roles=[], profile={"dev","prod"})`
   and `seed_tenant_routes(session, manifest, profile="prod")` are exported from
-  the top-level package. This is the D2 home of the TENANT route+link inserter
-  (route / permission_routes / role rows) — the app slims to a declarative
-  manifest and calls the package seeder instead of re-implementing.
+  the top-level package. This is the D2 home of the TENANT route+link+grant
+  inserter (route / permission_routes / role rows / **PermissionRole** grant
+  rows) — the app slims to a declarative manifest and calls the package seeder
+  instead of re-implementing.
 - Route natural key is `path` + `method` (the tenant Route model has **no**
   unique constraint on that pair; the seeder SELECTs by path+method and relies
   on serial seeding for idempotency).
+- **Grant creation**: when a `RouteSpec` declares a `permission`, the seeder
+  creates a `PermissionRole` grant row for every effective role (the declared
+  `roles`, or `OWNER` when `roles` is empty — cover-all semantics, spec v3).
+  `PermissionRole(role_id, permission_id)` is declared with
+  `uq_permission_roles_role_permission`, so duplicate seeds are safe (the
+  seeder's `insert_if_missing` SELECTs first; the constraint defends against
+  races on existing DBs).
 - **Cover-all semantics**: a tenant route with empty `roles` defaults to the
   tenant `OWNER` role (spec v3); explicit roles are honored when declared.
 - Profile-aware: dev-only tenant routes are excluded when running `prod`.

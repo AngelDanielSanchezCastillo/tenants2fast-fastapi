@@ -1,4 +1,5 @@
-from sqlmodel import Field
+from sqlmodel import Field, UniqueConstraint
+
 from .bases import TenantBaseModel
 
 
@@ -16,9 +17,20 @@ class RoleUser(TenantBaseModel, table=True):
 class PermissionRole(TenantBaseModel, table=True):
     """
     Link between a role and a permission.
+
+    One row per (role, permission) grant: the tenant route seeder creates these
+    rows from declared RouteSpec permissions, so the pair is unique.
     """
 
     __tablename__ = "permission_roles"
+
+    __table_args__ = (
+        UniqueConstraint(
+            "role_id",
+            "permission_id",
+            name="uq_permission_roles_role_permission",
+        ),
+    )
 
     role_id: int = Field(foreign_key="roles.id", index=True)
     permission_id: int = Field(foreign_key="permissions.id", index=True)

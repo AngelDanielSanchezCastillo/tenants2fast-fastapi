@@ -2,9 +2,10 @@
 test_tenant_owner_dep.py — TDD tests for require_tenant_owner dependency (R5).
 
 Monkeypatching tenant_role_service to verify:
-- OWNER role → 200
-- Non-OWNER role → 403
-- is_admin=true but no OWNER → 403
+- Owner role → 200 (cover-all canonical role after dedupe)
+- Legacy "OWNER" role → 403 (must NOT pass once the guard recognizes "Owner")
+- Non-owner role → 403
+- is_admin=true but no Owner → 403
 """
 
 import pytest
@@ -29,18 +30,18 @@ def _make_user(auth_user_id: int = 1) -> MagicMock:
 
 
 # ---------------------------------------------------------------------------
-# Test: OWNER holder → 200
+# Test: Owner holder → 200
 # ---------------------------------------------------------------------------
 
 @pytest.mark.asyncio
 async def test_owner_holder_allowed():
-    """A user with the OWNER role must pass require_tenant_owner."""
+    """A user with the Owner role must pass require_tenant_owner."""
     from tenant2fast_fastapi.dependencies.tenant_rbac import require_tenant_owner
 
     owner_dep = require_tenant_owner()
 
     mock_tenant_user = _make_user()
-    mock_roles = [_make_role("Admin"), _make_role("OWNER")]
+    mock_roles = [_make_role("Admin"), _make_role("Owner")]
 
     with (
         patch(
@@ -71,12 +72,55 @@ async def test_owner_holder_allowed():
 
 
 # ---------------------------------------------------------------------------
-# Test: Non-OWNER role → 403
+# Test: Legacy "OWNER" role → 403
+# ---------------------------------------------------------------------------
+
+@pytest.mark.asyncio
+async def test_legacy_uppercase_owner_denied():
+    """The legacy \"OWNER\" role must NOT satisfy require_tenant_owner."""
+    from fastapi import HTTPException
+    from tenant2fast_fastapi.dependencies.tenant_rbac import require_tenant_owner
+
+    owner_dep = require_tenant_owner()
+
+    mock_tenant_user = _make_user()
+    mock_roles = [_make_role("OWNER")]
+
+    with (
+        patch(
+            "tenant2fast_fastapi.dependencies.tenant_rbac.get_tenant_user_by_auth_id",
+            new_callable=AsyncMock,
+            return_value=mock_tenant_user,
+        ),
+        patch(
+            "tenant2fast_fastapi.dependencies.tenant_rbac.tenant_role_service.list_user_roles",
+            new_callable=AsyncMock,
+            return_value=mock_roles,
+        ),
+        patch(
+            "tenant2fast_fastapi.dependencies.tenant_rbac.get_tenant_session",
+        ) as mock_session_ctx,
+    ):
+        mock_session = AsyncMock()
+        mock_session_ctx.return_value.__aenter__ = AsyncMock(return_value=mock_session)
+        mock_session_ctx.return_value.__aexit__ = AsyncMock(return_value=False)
+
+        with pytest.raises(HTTPException) as exc_info:
+            await owner_dep(
+                tenant=MagicMock(id=1),
+                user=MagicMock(id=1),
+            )
+
+        assert exc_info.value.status_code == 403
+
+
+# ---------------------------------------------------------------------------
+# Test: Non-owner role → 403
 # ---------------------------------------------------------------------------
 
 @pytest.mark.asyncio
 async def test_non_owner_denied():
-    """A user without the OWNER role must be denied (403)."""
+    """A user without the Owner role must be denied (403)."""
     from fastapi import HTTPException
     from tenant2fast_fastapi.dependencies.tenant_rbac import require_tenant_owner
 
@@ -114,12 +158,12 @@ async def test_non_owner_denied():
 
 
 # ---------------------------------------------------------------------------
-# Test: is_admin=true but no OWNER → 403
+# Test: is_admin=true but no Owner → 403
 # ---------------------------------------------------------------------------
 
 @pytest.mark.asyncio
 async def test_is_admin_only_denied():
-    """is_admin=true must NOT bypass the OWNER requirement (R5 H2)."""
+    """is_admin=true must NOT bypass the Owner requirement (R5 H2)."""
     from fastapi import HTTPException
     from tenant2fast_fastapi.dependencies.tenant_rbac import require_tenant_owner
 

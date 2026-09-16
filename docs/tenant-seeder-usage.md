@@ -103,8 +103,11 @@ Behavior:
 - `active_only=True` (default) re-seeds only `Tenant.is_active == True`;
   `False` includes every tenant.
 - Per-tenant failures are logged and non-fatal — the loop continues.
+- When a tenant `RouteSpec` declares a `permission`, the seeder creates
+  `PermissionRole` grant rows for every effective role (declared roles, or
+  `OWNER` for cover-all routes with empty `roles`).
 - Returns a summary dict with `total`, `succeeded`, `failed`, `errors`,
-  `global_routes`, `tenant_routes`.
+  `global_routes`, `tenant_routes`, `tenant_grants`.
 
 ### Legacy Compatibility
 

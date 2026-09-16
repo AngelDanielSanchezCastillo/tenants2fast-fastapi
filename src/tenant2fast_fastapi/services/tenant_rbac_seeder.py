@@ -287,7 +287,7 @@ async def reseed_all_rbac(
     2. Active tenants are enumerated from the auth DB (``active_only`` filters
        ``Tenant.is_active``).
     3. For each tenant: ``seed(profile, tenant_id)`` (roles, categories,
-       permissions + OWNER grant) and then
+       permissions + Owner grant) and then
        ``tenant2fast_fastapi.seed_tenant_routes`` on that tenant's DB.
     4. Per-tenant failures are logged and non-fatal (the loop continues).
 
@@ -404,6 +404,50 @@ def _get_model_class(table_name: str):
     return mapping.get(table_name)
 
 
+# Seeder JSON keys that differ from the model field names. Mapped on load so
+# the seed file stays declarative ("category_id") while the model owns the
+# storage name ("permission_category_id"). Existing rows are re-synced from
+# these alias values ONLY when they differ, so reseeds converge without
+# duplicating rows.
+_FIELD_ALIASES: dict[str, dict[str, str]] = {
+    "permissions": {"category_id": "permission_category_id"},
+}
+
+# Model fields that are the destination of a _FIELD_ALIASES entry; only these
+# are re-synced on reseed (category_id → permission_category_id).
+_ALIAS_DEST_FIELDS = frozenset(
+    dst for aliases in _FIELD_ALIASES.values() for dst in aliases.values()
+)
+
+
+def _map_row_fields(table_name: str, row: dict[str, Any]) -> dict[str, Any]:
+    """Normalize seeder JSON keys onto model fields for ``table_name``."""
+    mapped = dict(row)
+    for src, dst in _FIELD_ALIASES.get(table_name, {}).items():
+        if src in mapped:
+            mapped[dst] = mapped.pop(src)
+    return mapped
+
+
+def _sync_alias_fields(model_class: type, existing, mapped: dict[str, Any]) -> bool:
+    """Update alias-mapped fields that differ on an existing row.
+
+    Returns True when a change is pending on the session. Only fields that are
+    the destination of a ``_FIELD_ALIASES`` entry are synced (e.g.
+    ``permission_category_id``); other columns keep their stored values.
+    """
+    changed = False
+    for key, value in mapped.items():
+        if key in ("id",) or key not in _ALIAS_DEST_FIELDS:
+            continue
+        if getattr(existing, key, None) != value:
+            setattr(existing, key, value)
+            changed = True
+    if changed:
+        return True
+    return False
+
+
 async def _seed_table_idempotent(
     session: AsyncSession,
     table_name: str,
@@ -432,6 +476,9 @@ async def _seed_table_idempotent(
             rows_skipped += 1
             continue
 
+        # Normalize seeder JSON keys onto model fields (category_id → permission_category_id).
+        mapped = _map_row_fields(table_name, row)
+
         # Check if row already exists by ID
         result = await session.exec(
             select(model_class).where(model_class.id == row_id)
@@ -439,13 +486,18 @@ async def _seed_table_idempotent(
         existing = result.one_or_none()
 
         if existing is not None:
-            logger.debug(f"Skipping existing row id={row_id} in table '{table_name}'")
+            if _sync_alias_fields(model_class, existing, mapped):
+                session.add(existing)
+                await session.commit()
+                logger.debug(f"Updated row id={row_id} in table '{table_name}'")
+            else:
+                logger.debug(f"Skipping existing row id={row_id} in table '{table_name}'")
             rows_skipped += 1
             continue
 
         # Insert new row
         try:
-            obj = model_class(**row)
+            obj = model_class(**mapped)
             session.add(obj)
             await session.commit()
             rows_inserted += 1

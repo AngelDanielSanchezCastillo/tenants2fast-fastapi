@@ -91,7 +91,9 @@ async def get_permission(
 ) -> JSONResponse | PermissionSingleResponse:
     """Get a specific permission by ID."""
     async with await get_tenant_session(tenant.id) as session:
-        permission = await tenant_permission_service.get_permission_by_id(permission_id, session)
+        # NOTE: the service method is get_permission; get_permission_by_id
+        # never existed (pre-existing 500 on this endpoint).
+        permission = await tenant_permission_service.get_permission(permission_id, session)
         if not permission:
             error_resp, http_status = APIResponse.fail(
                 message="Permission not found",

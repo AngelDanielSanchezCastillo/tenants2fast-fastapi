@@ -7,8 +7,10 @@ per-tenant DB idempotently, instead of the app hand-rolling its own inserter.
 
 TENANT rules:
 - Route natural key is ``path`` + ``method``.
-- cover-all routes (no explicit roles) default to the tenant OWNER role.
+- cover-all routes (no explicit roles) default to the tenant Owner role.
 - explicit roles are honored when declared.
+- routes with a ``permission`` create a ``PermissionRole`` grant per effective
+  role (declared roles, or Owner for cover-all), idempotently.
 - profile-aware: dev-only routes are excluded when running ``prod``.
 - idempotent via the shared ``pgsqlasync2fast.insert_if_missing`` primitive.
 
@@ -22,14 +24,17 @@ from dataclasses import dataclass, field
 
 from pgsqlasync2fast_fastapi.seeder import insert_if_missing
 
-from tenant2fast_fastapi.models.assignments_model import PermissionRoute
+from tenant2fast_fastapi.models.assignments_model import PermissionRole, PermissionRoute
 from tenant2fast_fastapi.models.permission_model import Permission
 from tenant2fast_fastapi.models.role_model import Role
 from tenant2fast_fastapi.models.route_model import Route
 
 # Cover-all semantics (spec v3): a tenant route without explicit roles is
-# implicitly granted to the tenant OWNER role.
-DEFAULT_TENANT_ROLE = "OWNER"
+# implicitly granted to the tenant Owner role. "Owner" is the SINGLE canonical
+# cover-all role (seeded id=1); the legacy "OWNER" name is cleaned up by
+# utils.tenant_owner_cleanup pre-boot in 0.7.4. Keeping one point of truth
+# avoids creating a duplicate role for the same owner.
+DEFAULT_TENANT_ROLE = "Owner"
 
 
 @dataclass(frozen=True, slots=True)
@@ -59,12 +64,13 @@ async def seed_tenant_routes(
 
     Returns:
         A summary dict: ``{"tenant_routes", "tenant_links", "tenant_roles",
-        "errors"}`` counts.
+        "tenant_grants", "errors"}`` counts.
     """
     summary: dict[str, int] = {
         "tenant_routes": 0,
         "tenant_links": 0,
         "tenant_roles": 0,
+        "tenant_grants": 0,
         "errors": 0,
     }
 
@@ -72,11 +78,12 @@ async def seed_tenant_routes(
         if profile not in spec.profile:
             continue
         try:
-            await _seed_tenant_route(session, spec)
             summary["tenant_routes"] += 1
             if spec.permission:
                 summary["tenant_links"] += 1
             summary["tenant_roles"] += len(_effective_roles(spec))
+            grants = await _seed_tenant_route(session, spec)
+            summary["tenant_grants"] += grants
         except Exception:
             summary["errors"] += 1
 
@@ -84,14 +91,17 @@ async def seed_tenant_routes(
 
 
 def _effective_roles(spec: RouteSpec) -> list[str]:
-    """Cover-all tenant routes default to OWNER; otherwise the explicit roles."""
+    """Cover-all tenant routes default to Owner; otherwise the explicit roles."""
     if not spec.roles:
         return [DEFAULT_TENANT_ROLE]
     return list(spec.roles)
 
 
-async def _seed_tenant_route(session, spec: RouteSpec) -> None:
-    """Insert/update one TENANT route (route + permission link + roles)."""
+async def _seed_tenant_route(session, spec: RouteSpec) -> int:
+    """Insert/update one TENANT route (route + permission link + roles + grants).
+
+    Returns the number of PermissionRole grant rows created.
+    """
     route = await insert_if_missing(
         session,
         Route,
@@ -99,6 +109,7 @@ async def _seed_tenant_route(session, spec: RouteSpec) -> None:
         defaults={"description": f"{spec.method} {spec.path}"},
     )
 
+    permission = None
     if spec.permission:
         permission = await insert_if_missing(
             session,
@@ -112,10 +123,20 @@ async def _seed_tenant_route(session, spec: RouteSpec) -> None:
             lookup={"permission_id": permission.id, "route_id": route.id},
         )
 
+    grants = 0
     for role_name in _effective_roles(spec):
-        await insert_if_missing(
+        role = await insert_if_missing(
             session,
             Role,
             lookup={"name": role_name},
             defaults={"is_active": True},
         )
+        if permission is not None:
+            await insert_if_missing(
+                session,
+                PermissionRole,
+                lookup={"role_id": role.id, "permission_id": permission.id},
+            )
+            grants += 1
+
+    return grants
