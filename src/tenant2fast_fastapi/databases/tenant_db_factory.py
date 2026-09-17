@@ -1,25 +1,19 @@
+from pgsqlasync2fast_fastapi import (
+    create_database,
+    drop_database,
+    get_lane_chains,
+    run_migrations,
+)
+from pgsqlasync2fast_fastapi.connection import get_manager
+from pgsqlasync2fast_fastapi.settings import DatabaseConnectionSettings
+from pgsqlasync2fast_fastapi.settings import settings as db_settings
 from sqlalchemy import MetaData
 from sqlmodel.ext.asyncio.session import AsyncSession
 
-from pgsqlasync2fast_fastapi import create_database, drop_database
-from pgsqlasync2fast_fastapi.connection import get_manager
-from pgsqlasync2fast_fastapi.settings import settings as db_settings, DatabaseConnectionSettings
-
-from ..settings import settings as tenant_settings
 from ..models.bases import tenant_metadata
 
 # Force import of all tenant models to ensure they register with MetaData
-from ..models.role_model import Role
-from ..models.permission_model import Permission
-from ..models.user_model import User
-from ..models.route_model import Route
-from ..models.assignments_model import (
-    RoleUser,
-    PermissionRole,
-    PermissionRoute,
-    PermissionUser
-)
-
+from ..settings import settings as tenant_settings
 
 # ── Helpers ────────────────────────────────────────────────────────────────────
 
@@ -112,8 +106,9 @@ async def create_tenant_database(tenant_id: int) -> str:
     Returns the name of the created database.
     """
     # 1. Get tenant details from Auth DB
-    from sqlmodel.ext.asyncio.session import AsyncSession
     from sqlmodel import select
+    from sqlmodel.ext.asyncio.session import AsyncSession
+
     from ..models.tenant_model import Tenant
     
     auth_engine = get_manager().get_engine("auth")
@@ -135,14 +130,32 @@ async def create_tenant_database(tenant_id: int) -> str:
 
 
 async def initialize_tenant_schema(tenant_id: int, metadata: MetaData = tenant_metadata):
-    # Ensure models are loaded
+    """
+    Initialize a tenant's dedicated database schema via the TENANT lane.
+
+    Alembic-2fast change (schema-bootstrap spec): replaces the former
+    metadata DDL bootstrap. The schema now comes from upgrade-to-head of
+    every chain registered under the ``"tenant"`` lane (``tenant2fast-rbac``
+    from this package plus the consumer-owned ``app`` chain), executed
+    through the shared async runner in ``pgsqlasync2fast_fastapi``
+    (``run_migrations``: config-only URL, fresh NullPool engine per run,
+    disposed after the run - pooled app engines are never reused).
+
+    The ``metadata`` argument is kept for backward compatibility of the
+    public signature; it no longer drives DDL emission. The tenant's
+    connection must already be registered (``create_tenant_database`` /
+    ``register_tenant_engine``), exactly as before - a missing registration
+    still raises ``ValueError``.
+    """
+    # Ensure models are loaded (registers TENANT lane tables with metadata)
     from ..utils.models_loader import import_tenant_models
     import_tenant_models()
-    
-    engine = get_tenant_engine(tenant_id)
 
-    async with engine.begin() as conn:
-        await conn.run_sync(metadata.create_all)
+    # Preserve the pre-change contract: raises ValueError when the tenant
+    # connection/engine is not registered.
+    get_tenant_engine(tenant_id)
+
+    await run_migrations(f"tenant_{tenant_id}", get_lane_chains("tenant"))
 
     print(f"✅ Initialized schema for tenant {tenant_id}")
 
@@ -159,8 +172,9 @@ async def delete_tenant_database(tenant_id: int):
     """
     Drop a tenant's physical database and remove its engine from cache.
     """
-    from sqlmodel.ext.asyncio.session import AsyncSession
     from sqlmodel import select
+    from sqlmodel.ext.asyncio.session import AsyncSession
+
     from ..models.tenant_model import Tenant
     
     auth_engine = get_manager().get_engine("auth")
