@@ -83,7 +83,7 @@ def _write_snapshot(
 
     payload = {
         "migration": "tenant_owner_cleanup",
-        "package_version": "0.7.4",
+        "package_version": "0.8.0",
         "created_at": datetime.now(timezone.utc).isoformat(timespec="seconds"),
         "tenant_id": tenant_id,
         "owner_role": {"id": owner.id, "name": owner.name} if owner else None,
