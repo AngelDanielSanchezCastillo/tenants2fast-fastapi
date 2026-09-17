@@ -30,8 +30,14 @@ dependencies = [
     # Pulls in pgsqlasync2fast-fastapi, mailing2fast-fastapi,
     # log2fast-fastapi, sqlmodel, fastapi, pydantic, etc. transitively.
     "permissions2fast-fastapi>=0.8.4",
-    # Direct import of the shared insert_if_missing primitive (v0.4.0).
-    "pgsqlasync2fast-fastapi>=0.4.0",
+    # Exact pin: 0.5.0 ships the shared Alembic runner/env/registry
+    # (ChainSpec, register_chain/get_lane_chains, run_migrations) that the
+    # package-owned chains depend on. Also provides the shared
+    # insert_if_missing primitive.
+    "pgsqlasync2fast-fastapi==0.5.0",
+    # Exact pin per the alembic-2fast migration change: deliberate re-pins
+    # require a version bump and a full test run. Never use a range here.
+    "alembic==1.20.0",
 ]
 
 [dependency-groups]
@@ -71,6 +77,9 @@ tenant2fast_fastapi = [
     "seeders/dev/*.json",
     "seeders/prod/*.json",
     "skills/*.md",
+    # Package-owned Alembic chains (alembic-2fast): shipped in the wheel and
+    # resolved from the installed release, never a checkout.
+    "migrations/**/*.py",
 ]
 
 # Single source of truth for the version: __version__.py
