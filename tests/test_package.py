@@ -7,7 +7,7 @@ version string is set correctly.
 
 import tenant2fast_fastapi as pkg
 from tenant2fast_fastapi.models.tenant_model import Tenant
-from tenant2fast_fastapi.models.user_tenant_model import UserTenant
+from tenant2fast_fastapi.models.user_tenant_model import TenantUser
 from tenant2fast_fastapi.settings import settings
 
 
@@ -46,8 +46,8 @@ def test_tenant_model_table_name():
 
 
 def test_user_tenant_model_table_name():
-    """UserTenant model must be bound to the 'user_tenants' table."""
-    assert UserTenant.__tablename__ == "user_tenants"
+    """TenantUser model must be bound to the 'tenant_users' table."""
+    assert TenantUser.__tablename__ == "tenant_users"
 
 
 def test_settings_loads():

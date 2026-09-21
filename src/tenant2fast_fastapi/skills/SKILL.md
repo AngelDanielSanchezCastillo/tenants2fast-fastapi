@@ -79,9 +79,18 @@ validate `is_active` → `set_tenant_context(tenant)` + register engine.
 
 ## Migrations & seeders
 
-- **No Alembic**: `run_tenant_migrations(tenant_id)` = `import_tenant_models()`
-  then `tenant_metadata.create_all` on the tenant engine;
-  `run_all_tenant_migrations()` iterates active tenants from the auth DB.
+- **Alembic chains (alembic-2fast)**: `initialize_tenant_schema(tenant_id)`
+  upgrades the tenant DB to head via the shared async runner
+  (`pgsqlasync2fast_fastapi.run_migrations`) over every chain registered
+  under the `"tenant"` lane. This package owns `tenant2fast-rbac`
+  (`migrations/tenant2fast-rbac/`, version table
+  `alembic_version_tenant_rbac`) and `tenant2fast-auth`
+  (`migrations/tenant2fast-auth/`, AUTH lane, version table
+  `alembic_version_tenant_auth`); consumers add their own `app` chain.
+  The public signature `initialize_tenant_schema(tenant_id,
+  metadata=tenant_metadata)` is kept, but `metadata` no longer drives DDL.
+- `run_tenant_migrations(tenant_id)` / `run_all_tenant_migrations()` remain
+  the legacy batch create_all utilities for manual re-sync.
 - Seeders: `SeederConfig(is_tenant_seeder=True, priority=70)`; manifest
   `load_order` categories → roles → permissions; idempotent by row `id`.
 - `seed_tenant_rbac(tenant_id, profile=None)` is **profile-aware** — it forwards
