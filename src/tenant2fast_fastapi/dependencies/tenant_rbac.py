@@ -2,18 +2,19 @@ from typing import Annotated
 
 from fastapi import Depends, HTTPException, Request, status
 from oauth2fast_fastapi.models.user_model import User as AuthUser
+from tools2fast_fastapi import AuthError
 
-from .tenant_context import get_current_tenant, get_current_user
+from ..databases.tenant_db_factory import get_tenant_session
 from ..models import Tenant
 from ..models.user_model import User  # Local user in tenant DB (not the Auth mapping)
 from ..services.tenant_access_service import tenant_access_service
 from ..services.tenant_role_service import tenant_role_service
 from ..services.tenant_user_service import get_tenant_user_by_auth_id
-from ..databases.tenant_db_factory import get_tenant_session
 from ..utils.tenant_cache import (
     get_tenant_user_permissions_cache,
     set_tenant_user_permissions_cache,
 )
+from .tenant_context import get_current_tenant, get_current_user
 
 
 def has_tenant_permission(
@@ -47,7 +48,9 @@ def has_tenant_permission(
         ):
             ...
     """
+
     async def _check(
+        request: Request,
         tenant: Annotated[Tenant, Depends(get_current_tenant)],
         user: Annotated[AuthUser, Depends(get_current_user)],
     ) -> bool:
@@ -71,9 +74,10 @@ def has_tenant_permission(
             async with await get_tenant_session(tenant.id) as session:
                 tenant_user = await get_tenant_user_by_auth_id(user.id, session)
                 if not tenant_user:
-                    raise HTTPException(
-                        status_code=status.HTTP_403_FORBIDDEN,
-                        detail="User is not registered in this tenant",
+                    raise AuthError(
+                        error_code="TenantUserMissing",
+                        message="El usuario no está registrado en este tenant",
+                        status_code=403,
                     )
 
                 permissions = await tenant_access_service.get_user_permissions(
@@ -89,9 +93,10 @@ def has_tenant_permission(
         )
 
         if not is_allowed:
-            raise HTTPException(
-                status_code=status.HTTP_403_FORBIDDEN,
-                detail="Not enough permissions to access this resource",
+            raise AuthError(
+                error_code="PermissionDenied",
+                message="Permisos insuficientes para acceder a este recurso",
+                status_code=403,
             )
 
         return True
@@ -114,6 +119,7 @@ def has_tenant_role(role_name: str):
         ):
             ...
     """
+
     async def _check(
         tenant: Annotated[Tenant, Depends(get_current_tenant)],
         user: Annotated[AuthUser, Depends(get_current_user)],
@@ -121,9 +127,10 @@ def has_tenant_role(role_name: str):
         async with await get_tenant_session(tenant.id) as session:
             tenant_user = await get_tenant_user_by_auth_id(user.id, session)
             if not tenant_user:
-                raise HTTPException(
-                    status_code=status.HTTP_403_FORBIDDEN,
-                    detail="User is not registered in this tenant",
+                raise AuthError(
+                    error_code="TenantUserMissing",
+                    message="El usuario no está registrado en este tenant",
+                    status_code=403,
                 )
 
             user_roles = await tenant_role_service.list_user_roles(
@@ -133,9 +140,10 @@ def has_tenant_role(role_name: str):
         has_required = any(r.name == role_name for r in user_roles)
 
         if not has_required:
-            raise HTTPException(
-                status_code=status.HTTP_403_FORBIDDEN,
-                detail=f"Missing required tenant role: {role_name}",
+            raise AuthError(
+                error_code="RoleMissing",
+                message=f"Rol de tenant requerido: {role_name}",
+                status_code=403,
             )
 
         return tenant_user
@@ -165,6 +173,7 @@ def require_tenant_owner():
         ):
             ...
     """
+
     async def _check(
         tenant: Annotated[Tenant, Depends(get_current_tenant)],
         user: Annotated[AuthUser, Depends(get_current_user)],
@@ -172,9 +181,10 @@ def require_tenant_owner():
         async with await get_tenant_session(tenant.id) as session:
             tenant_user = await get_tenant_user_by_auth_id(user.id, session)
             if not tenant_user:
-                raise HTTPException(
-                    status_code=status.HTTP_403_FORBIDDEN,
-                    detail="User is not registered in this tenant",
+                raise AuthError(
+                    error_code="TenantUserMissing",
+                    message="El usuario no está registrado en este tenant",
+                    status_code=403,
                 )
 
             user_roles = await tenant_role_service.list_user_roles(
@@ -184,9 +194,10 @@ def require_tenant_owner():
         is_owner = any(r.name == "Owner" for r in user_roles)
 
         if not is_owner:
-            raise HTTPException(
-                status_code=status.HTTP_403_FORBIDDEN,
-                detail="Only the tenant owner can perform this action",
+            raise AuthError(
+                error_code="RoleMissing",
+                message="Solo el propietario del tenant puede realizar esta acción",
+                status_code=403,
             )
 
         return tenant_user
@@ -206,6 +217,6 @@ async def get_current_tenant_user(
         if not tenant_user:
             raise HTTPException(
                 status_code=status.HTTP_404_NOT_FOUND,
-                detail="User record not found in tenant"
+                detail="User record not found in tenant",
             )
         return tenant_user

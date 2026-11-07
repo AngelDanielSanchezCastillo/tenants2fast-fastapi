@@ -5,22 +5,25 @@ This module provides context management for tenant resolution in FastAPI.
 The tenant context is set by middleware and can be accessed via dependency injection.
 """
 
-from contextvars import ContextVar
-from datetime import datetime, timezone
-
-from sqlmodel.ext.asyncio.session import AsyncSession
-from sqlmodel import select
 from collections.abc import AsyncGenerator
-from fastapi import Depends, HTTPException, status
+from contextvars import ContextVar
+from datetime import datetime
 
+from fastapi import Depends, Request
+from oauth2fast_fastapi.models.user_model import User
+from pgsqlasync2fast_fastapi.connection import get_manager
+from sqlmodel import select
+from sqlmodel.ext.asyncio.session import AsyncSession
+from tools2fast_fastapi import AuthError
+
+from ..databases.tenant_db_factory import get_tenant_session as get_factory_session
+from ..models.tenant_model import Tenant
 from ..utils.tenant_cache import (
     get_tenant_data_cache as get_tenant_data,
+)
+from ..utils.tenant_cache import (
     set_tenant_data_cache as cache_tenant_data,
 )
-from pgsqlasync2fast_fastapi.connection import get_manager
-from oauth2fast_fastapi.models.user_model import User
-from ..models.tenant_model import Tenant
-from ..databases.tenant_db_factory import get_tenant_session as get_factory_session
 
 # Context variable to store current tenant for the request
 _tenant_context: ContextVar[Tenant | None] = ContextVar("tenant_context", default=None)
@@ -49,39 +52,88 @@ def get_user_context() -> User | None:
     return _user_context.get()
 
 
-async def get_current_tenant() -> Tenant:
+async def get_current_tenant(request: Request) -> Tenant:
     """
-    FastAPI dependency to get current tenant.
-    Raises 403 if no tenant in context.
+    FastAPI dependency to get the current tenant.
+
+    Semantics:
+
+    - Problems with the token itself (missing/expired/invalid) → 401.
+    - A valid token whose user has no tenant, or an inactive tenant → 403.
+
+    The middleware records the token problem in ``request.state.auth_error``
+    and an inactive tenant in ``request.state.tenant_inactive``.
     """
     tenant = get_tenant_context()
+    user = get_user_context()
+    auth_error = getattr(request.state, "auth_error", None)
 
     if tenant is None:
-        raise HTTPException(
-            status_code=status.HTTP_403_FORBIDDEN,
-            detail="No tenant context available. Authentication required.",
+        if auth_error == "expired":
+            raise AuthError(
+                error_code="TokenExpired",
+                message="Token expirado",
+                www_authenticate='Bearer error="expired_token"',
+            )
+        if auth_error in ("invalid", "malformed"):
+            raise AuthError(
+                error_code="TokenInvalid",
+                message="Token inválido",
+                www_authenticate='Bearer error="invalid_token"',
+            )
+        if getattr(request.state, "tenant_inactive", False):
+            raise AuthError(
+                error_code="TenantInactive",
+                message="El tenant está inactivo",
+                status_code=403,
+            )
+        if user is None:
+            raise AuthError(
+                error_code="TokenMissing",
+                message="Autenticación requerida",
+            )
+        raise AuthError(
+            error_code="TenantRequired",
+            message="El usuario no tiene un tenant asociado",
+            status_code=403,
         )
 
     if not tenant.is_active:
-        raise HTTPException(
-            status_code=status.HTTP_403_FORBIDDEN,
-            detail="Tenant is inactive.",
+        raise AuthError(
+            error_code="TenantInactive",
+            message="El tenant está inactivo",
+            status_code=403,
         )
 
     return tenant
 
 
-async def get_current_user() -> User:
+async def get_current_user(request: Request) -> User:
     """
-    FastAPI dependency to get current user.
-    Raises 401 if no user in context.
+    FastAPI dependency to get the current user.
+
+    Raises 401 with ``TokenMissing`` / ``TokenExpired`` / ``TokenInvalid``
+    depending on why the token could not be used.
     """
     user = get_user_context()
 
     if user is None:
-        raise HTTPException(
-            status_code=status.HTTP_401_UNAUTHORIZED,
-            detail="Authentication required.",
+        auth_error = getattr(request.state, "auth_error", None)
+        if auth_error == "expired":
+            raise AuthError(
+                error_code="TokenExpired",
+                message="Token expirado",
+                www_authenticate='Bearer error="expired_token"',
+            )
+        if auth_error in ("invalid", "malformed"):
+            raise AuthError(
+                error_code="TokenInvalid",
+                message="Token inválido",
+                www_authenticate='Bearer error="invalid_token"',
+            )
+        raise AuthError(
+            error_code="TokenMissing",
+            message="Autenticación requerida",
         )
 
     return user
@@ -100,7 +152,7 @@ async def load_tenant_by_id(tenant_id: int) -> Tenant | None:
     try:
         manager = get_manager()
         auth_engine = manager.get_engine("auth")
-        
+
         async with AsyncSession(auth_engine, expire_on_commit=False) as session:
             result = await session.exec(select(Tenant).where(Tenant.id == tenant_id))
             tenant = result.one_or_none()
@@ -112,7 +164,7 @@ async def load_tenant_by_id(tenant_id: int) -> Tenant | None:
                 for key, val in data.items():
                     if isinstance(val, (datetime)):
                         data[key] = val.isoformat()
-                        
+
                 await cache_tenant_data(tenant_id, data)
 
             return tenant
@@ -132,4 +184,3 @@ async def get_tenant_db_session(
         yield session
     finally:
         await session.close()
-
