@@ -75,8 +75,36 @@ All settings use the `TENANT_` prefix and can be provided via environment variab
 | `TENANT_SUPERUSER_DB__PASSWORD` | `postgres` | PG superuser password |
 | `TENANT_SUPERUSER_DB__NAME` | `postgres` | Default DB for superuser connection |
 | `TENANT_MAX_TENANT_CONNECTIONS` | `5` | Connection pool size per tenant |
+| `TENANT_REDIS_URL` | unset | Optional Redis URL for tenant caches |
+| `TENANT_REDIS_TTL` | `300` | Tenant cache TTL in seconds |
+| `TENANT_SEED_PROFILE` | `dev` | Seeder profile (`dev`/`prod`) |
 
-In addition, all variables required by `oauth2fast-fastapi` (JWT, DB connections, mail) and `permissions2fast-fastapi` (Redis) must be set — see their respective READMEs.
+In addition, all variables required by `oauth2fast-fastapi` (JWT, refresh
+tokens, DB connections, mail) and `permissions2fast-fastapi` (Redis) must be
+set — see their respective READMEs.
+
+### Auth error contract
+
+`get_current_tenant` / `get_current_user` (and the tenant RBAC dependencies)
+distinguish authentication from authorization:
+
+| Situation | Status | `error.type` | `WWW-Authenticate` |
+|---|---|---|---|
+| No token | 401 | `TokenMissing` | `Bearer` |
+| Expired token | 401 | `TokenExpired` | `Bearer error="expired_token"` |
+| Malformed / bad signature | 401 | `TokenInvalid` | `Bearer error="invalid_token"` |
+| Valid token, no tenant | 403 | `TenantRequired` | — |
+| Inactive tenant | 403 | `TenantInactive` | — |
+| User not in tenant DB | 403 | `TenantUserMissing` | — |
+| Missing tenant permission | 403 | `PermissionDenied` | — |
+| Missing tenant role | 403 | `RoleMissing` | — |
+
+Install the envelope handler once at startup:
+
+```python
+from tools2fast_fastapi import install_auth_error_handler
+install_auth_error_handler(app)
+```
 
 ---
 

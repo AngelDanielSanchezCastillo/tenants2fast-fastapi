@@ -7,7 +7,7 @@ description: >
   package. Trigger: working on or with tenants2fast-fastapi.
 metadata:
   author: AngelDanielSanchezCastillo
-  version: "2.2"
+  version: "2.3"
   allowed-tools: Read, Edit, Write, Glob, Grep, Bash, Task
 ---
 
@@ -63,6 +63,14 @@ load `AuthUser` from auth engine → resolve tenant via `TenantUser` mapping
 (`X-Tenant-Id` header, else first link, else cache `user:{id}:tenant_id`) →
 validate `is_active` → `set_tenant_context(tenant)` + register engine.
 
+**Auth error contract (0.9.0)**: the middleware stores the token failure reason
+in `request.state.auth_error` (`expired`/`invalid`/`malformed`) and an inactive
+tenant in `request.state.tenant_inactive`. `get_current_tenant` /
+`get_current_user` then raise `AuthError` (tools2fast): 401 with
+`TokenMissing`/`TokenExpired`/`TokenInvalid` + RFC 6750 challenge, or 403 with
+`TenantRequired`/`TenantInactive`. Never return 403 for an invalid token again.
+Apps must call `install_auth_error_handler(app)` for the project envelope.
+
 ## RBAC
 
 - `has_tenant_permission("/users", "POST")` factory; path omitted →
@@ -71,6 +79,8 @@ validate `is_active` → `set_tenant_context(tenant)` + register engine.
   → role permissions → `evaluate_route_access` regex-matches `{param}`.
 - Redis cache `tenant:{id}:user:{id}:permissions`, TTL 300.
 - `has_tenant_role(name)` checks tenant-local role assignment.
+- Denials raise `AuthError` with 403 `PermissionDenied` / `RoleMissing` /
+  `TenantUserMissing` (no `WWW-Authenticate`).
 - `require_tenant_owner()` factory resolves the tenant-local **OWNER** role via
   `tenant_role_service.list_user_roles` and returns the tenant `User`; raises
   403 when the caller lacks OWNER. The binary `is_admin` flag is **ignored**
