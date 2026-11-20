@@ -36,7 +36,7 @@ from ..models.permission_model import Permission
 from ..databases.tenant_db_factory import get_tenant_session
 from ..settings import settings
 from permissions2fast_fastapi.services.route_seeder import seed_global_routes
-from pgsqlasync2fast_fastapi.seeder import sync_table_sequence
+from pgsqlasync2fast_fastapi.seeder import insert_if_missing, sync_table_sequence
 from .route_seeder import seed_tenant_routes
 
 logger = logging.getLogger(__name__)
@@ -455,7 +455,13 @@ async def _seed_table_idempotent(
     model_class: type
 ) -> tuple[int, int]:
     """
-    Seed a table idempotently by checking if rows exist by ID.
+    Seed a table idempotently (skip existing rows by ID, sync alias FKs).
+
+    Delegates row creation to the shared ``pgsqlasync2fast.insert_if_missing``
+    primitive and sequence re-sync to ``sync_table_sequence``. The only
+    tenant-specific behavior kept here is ``_sync_alias_fields``: existing rows
+    get their alias-mapped FK columns (e.g. ``permission_category_id``)
+    refreshed without clobbering other stored columns.
 
     Args:
         session: SQLModel AsyncSession
@@ -479,7 +485,7 @@ async def _seed_table_idempotent(
         # Normalize seeder JSON keys onto model fields (category_id → permission_category_id).
         mapped = _map_row_fields(table_name, row)
 
-        # Check if row already exists by ID
+        # Check if row already exists by ID (needed to decide alias-sync vs insert).
         result = await session.exec(
             select(model_class).where(model_class.id == row_id)
         )
@@ -495,17 +501,21 @@ async def _seed_table_idempotent(
             rows_skipped += 1
             continue
 
-        # Insert new row
+        # Shared primitive handles the INSERT (flush only; commit below).
         try:
-            obj = model_class(**mapped)
-            session.add(obj)
+            await insert_if_missing(
+                session,
+                model_class,
+                lookup={"id": row_id},
+                defaults={k: v for k, v in mapped.items() if k != "id"},
+            )
             await session.commit()
-            rows_inserted += 1
-            logger.debug(f"Inserted row id={row_id} in table '{table_name}'")
         except Exception as e:
             await session.rollback()
             logger.error(f"Failed to insert row in table '{table_name}': {e}")
             raise
+        rows_inserted += 1
+        logger.debug(f"Inserted row id={row_id} in table '{table_name}'")
 
     await sync_table_sequence(session, model_class)
 
