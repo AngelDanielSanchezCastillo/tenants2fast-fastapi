@@ -29,18 +29,17 @@ classifiers = [
 dependencies = [
     # Pulls in pgsqlasync2fast-fastapi, mailing2fast-fastapi,
     # log2fast-fastapi, sqlmodel, fastapi, pydantic, etc. transitively.
-    # 0.11.0 ships the standardized 403 auth error contract.
+    # 0.11.0+ ships the standardized 403 auth error contract.
     "permissions2fast-fastapi>=0.11.0",
     # Direct imports of User/token utilities and AuthError.
     "oauth2fast-fastapi>=0.6.0",
     "tools2fast-fastapi>=0.3.14",
-    # Exact pin: 0.5.1 ships the shared Alembic runner/env/registry
+    # 0.5.2+ ships the shared Alembic runner/env/registry
     # (ChainSpec, register_chain/get_lane_chains, run_migrations) that the
     # package-owned chains depend on. Also provides the shared
     # insert_if_missing primitive and upsert_by_id for idempotent seeding.
     "pgsqlasync2fast-fastapi>=0.5.2",
-    # Exact pin per the alembic-2fast migration change: deliberate re-pins
-    # require a version bump and a full test run. Never use a range here.
+    # Alembic ships the shared migration runner/env/registry.
     "alembic>=1.20.0",
 ]
 
