@@ -11,4 +11,4 @@ class Role(TenantBaseModel, table=True):
 
     name: str = Field(unique=True, index=True)
     description: str | None = Field(default=None)
-    is_active: bool = Field(default=True)
+    # is_active removed — soft-delete via SoftDeleteMixin (deleted_at)

@@ -6,6 +6,8 @@ These schemas provide unified API response format with success/error patterns.
 
 from datetime import datetime
 from typing import Literal
+from uuid import UUID
+
 from pydantic import BaseModel
 
 from tools2fast_fastapi import ErrorDetail
@@ -15,15 +17,16 @@ from tools2fast_fastapi import ErrorDetail
 
 class TenantResponse(BaseModel):
     """Response for tenant data."""
-    id: int
+    id: UUID
     name: str
     slug: str
     database_name: str
-    is_active: bool
     contact_email: str | None = None
     max_users: int | None = None
     created_at: datetime
     updated_at: datetime
+    deleted_at: datetime | None = None
+    deleted_by: UUID | None = None
 
 
 class TenantCreatedResponse(BaseModel):
@@ -69,14 +72,15 @@ class TenantUnexpectedErrorResponse(BaseModel):
 
 class UserResponse(BaseModel):
     """Response for user data."""
-    id: int
-    auth_user_id: int
+    id: UUID
+    auth_user_id: UUID
     position: str | None = None
     department: str | None = None
     is_admin: bool = False
-    is_active: bool = True
     created_at: datetime
     updated_at: datetime
+    deleted_at: datetime | None = None
+    deleted_by: UUID | None = None
 
 
 class UserCreatedResponse(BaseModel):
@@ -113,12 +117,12 @@ class UserErrorResponse(BaseModel):
 
 class PermissionResponse(BaseModel):
     """Response for permission data."""
-    id: int
+    id: UUID
     name: str
     # Null-safe: permissions without a seeded category serialize as null
     # instead of failing validation (staging regression: 500 on GET
     # /tenants/permissions/).
-    permission_category_id: int | None = None
+    permission_category_id: UUID | None = None
 
 
 class PermissionListResponse(BaseModel):
@@ -146,7 +150,7 @@ class PermissionErrorResponse(BaseModel):
 
 class CategoryResponse(BaseModel):
     """Response for permission category data."""
-    id: int
+    id: UUID
     name: str
 
 
@@ -162,12 +166,13 @@ class CategoryListResponse(BaseModel):
 
 class RoleResponse(BaseModel):
     """Response for role data."""
-    id: int
+    id: UUID
     name: str
     description: str | None = None
-    is_active: bool = True
     created_at: datetime | None = None
     updated_at: datetime | None = None
+    deleted_at: datetime | None = None
+    deleted_by: UUID | None = None
 
 
 class RoleCreatedResponse(BaseModel):

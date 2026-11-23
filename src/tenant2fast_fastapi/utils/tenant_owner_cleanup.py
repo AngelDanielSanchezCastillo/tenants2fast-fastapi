@@ -33,7 +33,7 @@ CLI::
     python -m tenant2fast_fastapi.utils.tenant_owner_cleanup --dry-run
 
     # Apply for ONE tenant (snapshot written under backups/)
-    python -m tenant2fast_fastapi.utils.tenant_owner_cleanup --apply --tenant 1
+    python -m tenant2fast_fastapi.utils.tenant_owner_cleanup --apply --tenant <uuid>
 
     # Apply for all active tenants
     python -m tenant2fast_fastapi.utils.tenant_owner_cleanup --apply
@@ -47,9 +47,11 @@ import json
 from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any
+from uuid import UUID
 
 from sqlmodel import select
 from sqlmodel.ext.asyncio.session import AsyncSession
+from tools2fast_fastapi import active_only
 
 from ..databases.tenant_db_factory import get_tenant_session
 from ..models.assignments_model import PermissionRole, RoleUser
@@ -70,7 +72,7 @@ DEFAULT_SNAPSHOT_ROOT = Path("backups") / "tenant_owner_cleanup"
 
 def _write_snapshot(
     root: Path,
-    tenant_id: int,
+    tenant_id: UUID,
     owner: Role | None,
     orphan: Role,
     orphan_grants: list[PermissionRole],
@@ -83,17 +85,17 @@ def _write_snapshot(
 
     payload = {
         "migration": "tenant_owner_cleanup",
-        "package_version": "0.8.0",
+        "package_version": "0.10.0",
         "created_at": datetime.now(timezone.utc).isoformat(timespec="seconds"),
-        "tenant_id": tenant_id,
-        "owner_role": {"id": owner.id, "name": owner.name} if owner else None,
-        "orphan_role": {"id": orphan.id, "name": orphan.name},
+        "tenant_id": str(tenant_id),
+        "owner_role": {"id": str(owner.id), "name": owner.name} if owner else None,
+        "orphan_role": {"id": str(orphan.id), "name": orphan.name},
         "grant_rows": [
-            {"role": ORPHAN_ROLE_NAME, "permission_id": g.permission_id}
+            {"role": ORPHAN_ROLE_NAME, "permission_id": str(g.permission_id)}
             for g in orphan_grants
         ],
         "role_user_rows": [
-            {"role": ORPHAN_ROLE_NAME, "user_id": ru.user_id}
+            {"role": ORPHAN_ROLE_NAME, "user_id": str(ru.user_id)}
             for ru in orphan_role_users
         ],
     }
@@ -109,7 +111,7 @@ def _write_snapshot(
 
 
 async def cleanup_owner_role(
-    tenant_id: int,
+    tenant_id: UUID,
     *,
     dry_run: bool = False,
     snapshot_dir: str | Path | None = None,
@@ -128,7 +130,7 @@ async def cleanup_owner_role(
         what ``--apply`` WOULD do; in apply mode they describe what was done.
     """
     report: dict[str, Any] = {
-        "tenant_id": tenant_id,
+        "tenant_id": str(tenant_id),
         "dry_run": dry_run,
         "owner_found": False,
         "orphan_found": False,
@@ -151,15 +153,12 @@ async def cleanup_owner_role(
         report["owner_found"] = owner is not None
         report["orphan_found"] = orphan is not None
 
-        # Defensive: guarantee the canonical Owner role exists. "Owner" is a
-        # reserved system role (every RBAC seeder declares it as id=1), so it
-        # is re-created with that fixed id. A collision means the tenant data
-        # was manipulated by hand and must be inspected (fails the tenant).
+        # Defensive: guarantee the canonical Owner role exists.
         if owner is None:
             if dry_run:
                 report["owner_created"] = True
             else:
-                owner = Role(id=1, name=OWNER_ROLE_NAME, is_active=True)
+                owner = Role(name=OWNER_ROLE_NAME)
                 session.add(owner)
                 await session.commit()
                 await session.refresh(owner)
@@ -190,8 +189,8 @@ async def cleanup_owner_role(
 
         if owner is None:
             # Dry-run where Owner is missing: nothing on "Owner" to merge yet.
-            owner_grant_perms: set[int] = set()
-            owner_user_ids: set[int] = set()
+            owner_grant_perms: set[UUID] = set()
+            owner_user_ids: set[UUID] = set()
         else:
             owner_grant_perms = {
                 g.permission_id
@@ -255,7 +254,7 @@ async def cleanup_owner_role(
 # ---------------------------------------------------------------------------
 
 
-async def _list_active_tenants() -> list[int]:
+async def _list_active_tenants() -> list[UUID]:
     """Enumerate active tenant ids from the auth DB (same pattern as migrations)."""
     from pgsqlasync2fast_fastapi.connection import get_manager
 
@@ -263,7 +262,7 @@ async def _list_active_tenants() -> list[int]:
 
     auth_engine = get_manager().get_engine("auth")
     async with AsyncSession(auth_engine) as session:
-        result = await session.exec(select(Tenant).where(Tenant.is_active.is_(True)))
+        result = await session.exec(active_only(select(Tenant)))
         return [t.id for t in result.all()]
 
 
@@ -292,7 +291,7 @@ async def cleanup_all_tenants(
             summary["results"].append(report)
         except (OSError, RuntimeError, ValueError) as exc:
             # Non-fatal: keep cleaning the remaining tenants.
-            summary["results"].append({"tenant_id": tenant_id, "error": str(exc)})
+            summary["results"].append({"tenant_id": str(tenant_id), "error": str(exc)})
     return summary
 
 
@@ -313,9 +312,9 @@ def build_parser() -> argparse.ArgumentParser:
     )
     parser.add_argument(
         "--tenant",
-        type=int,
+        type=str,
         default=None,
-        help="Only process this tenant id instead of every active tenant.",
+        help="Only process this tenant id (UUID) instead of every active tenant.",
     )
     parser.add_argument(
         "--snapshot-dir",
@@ -329,8 +328,9 @@ async def _run(argv: list[str] | None) -> int:
     args = build_parser().parse_args(argv)
     dry_run = not args.apply
     if args.tenant is not None:
+        tenant_id = UUID(args.tenant)
         result = await cleanup_owner_role(
-            args.tenant, dry_run=dry_run, snapshot_dir=args.snapshot_dir
+            tenant_id, dry_run=dry_run, snapshot_dir=args.snapshot_dir
         )
         print(json.dumps(result, indent=2, ensure_ascii=False))
     else:

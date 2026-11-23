@@ -1,3 +1,5 @@
+from uuid import UUID
+
 from fastapi import APIRouter, Depends
 from fastapi.responses import JSONResponse
 from sqlmodel.ext.asyncio.session import AsyncSession
@@ -86,7 +88,7 @@ async def list_categories(
     responses={404: {"model": PermissionErrorResponse}},
 )
 async def get_permission(
-    permission_id: int,
+    permission_id: UUID,
     tenant: Tenant = Depends(get_current_tenant)
 ) -> JSONResponse | PermissionSingleResponse:
     """Get a specific permission by ID."""

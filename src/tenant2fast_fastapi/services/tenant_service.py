@@ -4,6 +4,8 @@ Tenant Service
 Business logic for tenant operations including database provisioning.
 """
 
+from uuid import UUID
+
 from fastapi import HTTPException, status
 from sqlmodel.ext.asyncio.session import AsyncSession
 from sqlmodel import select
@@ -41,7 +43,7 @@ async def create_tenant(tenant_data: TenantCreate, profile: str | None = None) -
         HTTPException(500) when RBAC seeding produces errors.
     """
     async with await get_manager().get_session("auth") as session:
-        # Check if slug already exists
+        # Check if slug already exists (global unique — includes soft-deleted)
         result = await session.exec(select(Tenant).where(Tenant.slug == tenant_data.slug)
         )
         existing = result.one_or_none()
@@ -92,11 +94,10 @@ async def create_tenant(tenant_data: TenantCreate, profile: str | None = None) -
             await cache_tenant_data(
                 tenant.id,
                 {
-                    "id": tenant.id,
+                    "id": str(tenant.id),
                     "name": tenant.name,
                     "slug": tenant.slug,
                     "database_name": tenant.database_name,
-                    "is_active": tenant.is_active,
                     "contact_email": tenant.contact_email,
                     "max_users": tenant.max_users,
                     "created_at": tenant.created_at.isoformat(),
@@ -117,7 +118,7 @@ async def create_tenant(tenant_data: TenantCreate, profile: str | None = None) -
             )
 
 
-async def get_tenant_by_id(tenant_id: int) -> Tenant | None:
+async def get_tenant_by_id(tenant_id: UUID) -> Tenant | None:
     """Get tenant by ID."""
     async with await get_manager().get_session("auth") as session:
         result = await session.exec(select(Tenant).where(Tenant.id == tenant_id))
@@ -144,7 +145,7 @@ async def list_tenants(skip: int = 0, limit: int = 100) -> tuple[list[Tenant], i
         return list(tenants), total
 
 
-async def update_tenant(tenant_id: int, tenant_data: TenantUpdate) -> Tenant:
+async def update_tenant(tenant_id: UUID, tenant_data: TenantUpdate) -> Tenant:
     """Update tenant metadata."""
     async with await get_manager().get_session("auth") as session:
         result = await session.exec(select(Tenant).where(Tenant.id == tenant_id))
@@ -167,11 +168,10 @@ async def update_tenant(tenant_id: int, tenant_data: TenantUpdate) -> Tenant:
         await cache_tenant_data(
             tenant.id,
             {
-                "id": tenant.id,
+                "id": str(tenant.id),
                 "name": tenant.name,
                 "slug": tenant.slug,
                 "database_name": tenant.database_name,
-                "is_active": tenant.is_active,
                 "contact_email": tenant.contact_email,
                 "max_users": tenant.max_users,
                 "created_at": tenant.created_at.isoformat(),
@@ -182,12 +182,23 @@ async def update_tenant(tenant_id: int, tenant_data: TenantUpdate) -> Tenant:
         return tenant
 
 
-async def deactivate_tenant(tenant_id: int) -> Tenant:
-    """Deactivate a tenant (soft delete)."""
-    return await update_tenant(tenant_id, TenantUpdate(is_active=False))
+async def deactivate_tenant(tenant_id: UUID) -> Tenant:
+    """Soft-delete a tenant. Tenant can be restored later via restore()."""
+    async with await get_manager().get_session("auth") as session:
+        result = await session.exec(select(Tenant).where(Tenant.id == tenant_id))
+        tenant = result.one_or_none()
+
+        if not tenant:
+            raise HTTPException(
+                status_code=status.HTTP_404_NOT_FOUND,
+                detail=f"Tenant {tenant_id} not found",
+            )
+
+        from tools2fast_fastapi import soft_delete
+        return await soft_delete(session, tenant)
 
 
-async def delete_tenant_permanently(tenant_id: int):
+async def delete_tenant_permanently(tenant_id: UUID):
     """
     Permanently delete a tenant and their database.
     USE WITH EXTREME CAUTION!

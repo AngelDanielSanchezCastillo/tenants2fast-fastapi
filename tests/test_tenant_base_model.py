@@ -3,6 +3,7 @@ test_tenant_base_model.py – tests for custom models and tenant-specific tables
 """
 
 import pytest
+from uuid import UUID
 from sqlalchemy import inspect
 from sqlmodel import Field, select
 from tenant2fast_fastapi.models.bases import TenantBaseModel
@@ -58,6 +59,7 @@ async def test_custom_model_crud(test_tenant):
         await session.commit()
         await session.refresh(product)
         assert product.id is not None
+        assert isinstance(product.id, UUID)
 
         # Read using SQLModel standard async API
         result = await session.exec(select(Product).where(Product.id == product.id))

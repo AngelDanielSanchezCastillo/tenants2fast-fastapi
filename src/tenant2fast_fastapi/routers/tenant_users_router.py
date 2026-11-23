@@ -1,3 +1,5 @@
+from uuid import UUID
+
 from fastapi import APIRouter, Depends, status
 from fastapi.responses import JSONResponse
 
@@ -40,6 +42,21 @@ tenant_users_router = APIRouter(
 )
 
 
+def _user_response(user) -> UserResponse:
+    """Build a UserResponse from a User model."""
+    return UserResponse(
+        id=user.id,
+        auth_user_id=user.auth_user_id,
+        position=user.position,
+        department=user.department,
+        is_admin=user.is_admin,
+        created_at=user.created_at,
+        updated_at=user.updated_at,
+        deleted_at=user.deleted_at,
+        deleted_by=user.deleted_by,
+    )
+
+
 @tenant_users_router.post(
     "/",
     response_model=UserCreatedResponse,
@@ -53,18 +70,7 @@ async def add_user(
     """Add a user to the current tenant."""
     async with await get_tenant_session(tenant.id) as session:
         user = await tenant_user_service.add_user_to_tenant(user_data, session)
-        return UserCreatedResponse(
-            user=UserResponse(
-                id=user.id,
-                auth_user_id=user.auth_user_id,
-                position=user.position,
-                department=user.department,
-                is_admin=user.is_admin,
-                is_active=user.is_active,
-                created_at=user.created_at,
-                updated_at=user.updated_at,
-            )
-        )
+        return UserCreatedResponse(user=_user_response(user))
 
 
 @tenant_users_router.get(
@@ -81,19 +87,7 @@ async def list_users(
     async with await get_tenant_session(tenant.id) as session:
         users = await tenant_user_service.list_tenant_users(session, skip, limit)
         return UserListResponse(
-            users=[
-                UserResponse(
-                    id=u.id,
-                    auth_user_id=u.auth_user_id,
-                    position=u.position,
-                    department=u.department,
-                    is_admin=u.is_admin,
-                    is_active=u.is_active,
-                    created_at=u.created_at,
-                    updated_at=u.updated_at,
-                )
-                for u in users
-            ],
+            users=[_user_response(u) for u in users],
             count=len(users),
         )
 
@@ -106,18 +100,7 @@ async def get_me(
     current_user: User = Depends(get_current_tenant_user)
 ) -> UserSingleResponse:
     """Get the current user's record in the tenant context."""
-    return UserSingleResponse(
-        user=UserResponse(
-            id=current_user.id,
-            auth_user_id=current_user.auth_user_id,
-            position=current_user.position,
-            department=current_user.department,
-            is_admin=current_user.is_admin,
-            is_active=current_user.is_active,
-            created_at=current_user.created_at,
-            updated_at=current_user.updated_at,
-        )
-    )
+    return UserSingleResponse(user=_user_response(current_user))
 
 
 @tenant_users_router.get(
@@ -127,7 +110,7 @@ async def get_me(
     responses={404: {"model": UserErrorResponse}},
 )
 async def get_user(
-    user_id: int,
+    user_id: UUID,
     tenant: Tenant = Depends(get_current_tenant)
 ) -> JSONResponse | UserSingleResponse:
     """Get a specific user's record."""
@@ -139,18 +122,7 @@ async def get_user(
                 status_code=404,
             )
             return JSONResponse(status_code=http_status, content=error_resp.model_dump())
-        return UserSingleResponse(
-            user=UserResponse(
-                id=user.id,
-                auth_user_id=user.auth_user_id,
-                position=user.position,
-                department=user.department,
-                is_admin=user.is_admin,
-                is_active=user.is_active,
-                created_at=user.created_at,
-                updated_at=user.updated_at,
-            )
-        )
+        return UserSingleResponse(user=_user_response(user))
 
 
 @tenant_users_router.patch(
@@ -159,25 +131,14 @@ async def get_user(
     dependencies=[Depends(has_tenant_permission("/users/{user_id}", "PATCH"))]
 )
 async def update_user(
-    user_id: int,
+    user_id: UUID,
     user_data: TenantUserUpdate,
     tenant: Tenant = Depends(get_current_tenant)
 ) -> UserSingleResponse:
     """Update a user's record or roles."""
     async with await get_tenant_session(tenant.id) as session:
         user = await tenant_user_service.update_tenant_user(user_id, user_data, session)
-        return UserSingleResponse(
-            user=UserResponse(
-                id=user.id,
-                auth_user_id=user.auth_user_id,
-                position=user.position,
-                department=user.department,
-                is_admin=user.is_admin,
-                is_active=user.is_active,
-                created_at=user.created_at,
-                updated_at=user.updated_at,
-            )
-        )
+        return UserSingleResponse(user=_user_response(user))
 
 
 @tenant_users_router.delete(
@@ -186,10 +147,10 @@ async def update_user(
     dependencies=[Depends(has_tenant_permission("/users/{user_id}", "DELETE"))]
 )
 async def remove_user(
-    user_id: int,
+    user_id: UUID,
     tenant: Tenant = Depends(get_current_tenant)
 ) -> DeleteSuccessResponse:
     """Remove a user from the tenant."""
     async with await get_tenant_session(tenant.id) as session:
-        await tenant_user_service.remove_user_from_tenant(user_id, session)
+        await tenant_user_service.remove_user_from_tenant(tenant.id, user_id, session)
     return DeleteSuccessResponse()

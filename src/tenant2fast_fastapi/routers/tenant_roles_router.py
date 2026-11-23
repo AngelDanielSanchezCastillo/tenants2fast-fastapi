@@ -1,3 +1,5 @@
+from uuid import UUID
+
 from fastapi import APIRouter, Depends, status
 from fastapi.responses import JSONResponse
 from sqlmodel.ext.asyncio.session import AsyncSession
@@ -36,6 +38,19 @@ tenant_roles_router = APIRouter(
 )
 
 
+def _role_response(role) -> RoleResponse:
+    """Build a RoleResponse from a Role model."""
+    return RoleResponse(
+        id=role.id,
+        name=role.name,
+        description=role.description,
+        created_at=role.created_at,
+        updated_at=role.updated_at,
+        deleted_at=role.deleted_at,
+        deleted_by=role.deleted_by,
+    )
+
+
 @tenant_roles_router.post(
     "/",
     response_model=RoleCreatedResponse,
@@ -49,16 +64,7 @@ async def create_role(
     """Create a new role in the tenant."""
     async with await get_tenant_session(tenant.id) as session:
         role = await tenant_role_service.create_role(role_data, session)
-        return RoleCreatedResponse(
-            role=RoleResponse(
-                id=role.id,
-                name=role.name,
-                description=role.description,
-                is_active=role.is_active,
-                created_at=role.created_at,
-                updated_at=role.updated_at,
-            )
-        )
+        return RoleCreatedResponse(role=_role_response(role))
 
 
 @tenant_roles_router.get(
@@ -75,17 +81,7 @@ async def list_roles(
     async with await get_tenant_session(tenant.id) as session:
         roles = await tenant_role_service.list_roles(session, skip, limit)
         return RoleListResponse(
-            roles=[
-                RoleResponse(
-                    id=r.id,
-                    name=r.name,
-                    description=r.description,
-                    is_active=r.is_active,
-                    created_at=r.created_at,
-                    updated_at=r.updated_at,
-                )
-                for r in roles
-            ],
+            roles=[_role_response(r) for r in roles],
             count=len(roles),
         )
 
@@ -97,28 +93,19 @@ async def list_roles(
     responses={404: {"model": RoleErrorResponse}},
 )
 async def get_role(
-    role_id: int,
+    role_id: UUID,
     tenant: Tenant = Depends(get_current_tenant)
 ) -> JSONResponse | RoleSingleResponse:
     """Get a specific role by ID."""
     async with await get_tenant_session(tenant.id) as session:
-        role = await tenant_role_service.get_role_by_id(role_id, session)
+        role = await tenant_role_service.get_role(role_id, session)
         if not role:
             error_resp, http_status = APIResponse.fail(
                 message="Role not found",
                 status_code=404,
             )
             return JSONResponse(status_code=http_status, content=error_resp.model_dump())
-        return RoleSingleResponse(
-            role=RoleResponse(
-                id=role.id,
-                name=role.name,
-                description=role.description,
-                is_active=role.is_active,
-                created_at=role.created_at,
-                updated_at=role.updated_at,
-            )
-        )
+        return RoleSingleResponse(role=_role_response(role))
 
 
 @tenant_roles_router.patch(
@@ -127,23 +114,14 @@ async def get_role(
     dependencies=[Depends(has_tenant_permission("/roles/{role_id}", "PATCH"))]
 )
 async def update_role(
-    role_id: int,
+    role_id: UUID,
     role_data: RoleUpdate,
     tenant: Tenant = Depends(get_current_tenant)
 ) -> RoleSingleResponse:
     """Update a role's metadata or permissions."""
     async with await get_tenant_session(tenant.id) as session:
         role = await tenant_role_service.update_role(role_id, role_data, session)
-        return RoleSingleResponse(
-            role=RoleResponse(
-                id=role.id,
-                name=role.name,
-                description=role.description,
-                is_active=role.is_active,
-                created_at=role.created_at,
-                updated_at=role.updated_at,
-            )
-        )
+        return RoleSingleResponse(role=_role_response(role))
 
 
 @tenant_roles_router.delete(
@@ -152,7 +130,7 @@ async def update_role(
     dependencies=[Depends(has_tenant_permission("/roles/{role_id}", "DELETE"))]
 )
 async def delete_role(
-    role_id: int,
+    role_id: UUID,
     tenant: Tenant = Depends(get_current_tenant)
 ) -> DeleteSuccessResponse:
     """Delete a role from the tenant."""

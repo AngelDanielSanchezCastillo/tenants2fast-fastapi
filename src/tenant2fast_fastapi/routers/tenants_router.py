@@ -5,6 +5,7 @@ API endpoints for tenant management (admin only).
 """
 
 from typing import Annotated
+from uuid import UUID
 
 from fastapi import APIRouter, Query, status
 from fastapi.responses import JSONResponse
@@ -36,6 +37,22 @@ tenants_router = APIRouter(
 )
 
 
+def _tenant_response(tenant) -> TenantResponse:
+    """Build a TenantResponse from a Tenant model."""
+    return TenantResponse(
+        id=tenant.id,
+        name=tenant.name,
+        slug=tenant.slug,
+        database_name=tenant.database_name,
+        contact_email=tenant.contact_email,
+        max_users=tenant.max_users,
+        created_at=tenant.created_at,
+        updated_at=tenant.updated_at,
+        deleted_at=tenant.deleted_at,
+        deleted_by=tenant.deleted_by,
+    )
+
+
 @tenants_router.post(
     "",
     response_model=TenantCreatedResponse,
@@ -54,19 +71,7 @@ async def create_tenant(tenant_data: TenantCreate) -> TenantCreatedResponse:
     4. Cache tenant data in Redis
     """
     tenant = await tenant_service.create_tenant(tenant_data)
-    return TenantCreatedResponse(
-        tenant=TenantResponse(
-            id=tenant.id,
-            name=tenant.name,
-            slug=tenant.slug,
-            database_name=tenant.database_name,
-            is_active=tenant.is_active,
-            contact_email=tenant.contact_email,
-            max_users=tenant.max_users,
-            created_at=tenant.created_at,
-            updated_at=tenant.updated_at,
-        )
-    )
+    return TenantCreatedResponse(tenant=_tenant_response(tenant))
 
 
 @tenants_router.get(
@@ -76,7 +81,7 @@ async def create_tenant(tenant_data: TenantCreate) -> TenantCreatedResponse:
     description="Retrieve tenant information by ID.",
     responses={404: {"model": TenantErrorResponse}},
 )
-async def get_current_tenant(tenant_id: int) -> JSONResponse | TenantSingleResponse:
+async def get_current_tenant(tenant_id: UUID) -> JSONResponse | TenantSingleResponse:
     """Get tenant by ID."""
     tenant = await tenant_service.get_tenant_by_id(tenant_id)
 
@@ -87,19 +92,7 @@ async def get_current_tenant(tenant_id: int) -> JSONResponse | TenantSingleRespo
         )
         return JSONResponse(status_code=http_status, content=error_resp.model_dump())
 
-    return TenantSingleResponse(
-        tenant=TenantResponse(
-            id=tenant.id,
-            name=tenant.name,
-            slug=tenant.slug,
-            database_name=tenant.database_name,
-            is_active=tenant.is_active,
-            contact_email=tenant.contact_email,
-            max_users=tenant.max_users,
-            created_at=tenant.created_at,
-            updated_at=tenant.updated_at,
-        )
-    )
+    return TenantSingleResponse(tenant=_tenant_response(tenant))
 
 
 @tenants_router.get(
@@ -120,19 +113,7 @@ async def get_tenant_by_slug(slug: str) -> JSONResponse | TenantSingleResponse:
         )
         return JSONResponse(status_code=http_status, content=error_resp.model_dump())
 
-    return TenantSingleResponse(
-        tenant=TenantResponse(
-            id=tenant.id,
-            name=tenant.name,
-            slug=tenant.slug,
-            database_name=tenant.database_name,
-            is_active=tenant.is_active,
-            contact_email=tenant.contact_email,
-            max_users=tenant.max_users,
-            created_at=tenant.created_at,
-            updated_at=tenant.updated_at,
-        )
-    )
+    return TenantSingleResponse(tenant=_tenant_response(tenant))
 
 
 @tenants_router.get(
@@ -149,20 +130,7 @@ async def list_tenants(
     tenants, total = await tenant_service.list_tenants(skip=skip, limit=limit)
 
     return TenantListResponse(
-        tenants=[
-            TenantResponse(
-                id=t.id,
-                name=t.name,
-                slug=t.slug,
-                database_name=t.database_name,
-                is_active=t.is_active,
-                contact_email=t.contact_email,
-                max_users=t.max_users,
-                created_at=t.created_at,
-                updated_at=t.updated_at,
-            )
-            for t in tenants
-        ],
+        tenants=[_tenant_response(t) for t in tenants],
         total=total,
         count=len(tenants),
     )
@@ -174,32 +142,20 @@ async def list_tenants(
     summary="Update tenant",
     description="Update tenant metadata. Cannot change slug or database_name.",
 )
-async def update_tenant(tenant_id: int, tenant_data: TenantUpdate) -> TenantSingleResponse:
+async def update_tenant(tenant_id: UUID, tenant_data: TenantUpdate) -> TenantSingleResponse:
     """Update tenant metadata."""
     tenant = await tenant_service.update_tenant(tenant_id, tenant_data)
-    return TenantSingleResponse(
-        tenant=TenantResponse(
-            id=tenant.id,
-            name=tenant.name,
-            slug=tenant.slug,
-            database_name=tenant.database_name,
-            is_active=tenant.is_active,
-            contact_email=tenant.contact_email,
-            max_users=tenant.max_users,
-            created_at=tenant.created_at,
-            updated_at=tenant.updated_at,
-        )
-    )
+    return TenantSingleResponse(tenant=_tenant_response(tenant))
 
 
 @tenants_router.delete(
     "/{tenant_id}",
     response_model=DeleteSuccessResponse,
-    summary="Deactivate tenant",
-    description="Deactivate a tenant (soft delete). Tenant can be reactivated later.",
+    summary="Soft-delete tenant",
+    description="Soft-delete a tenant. Tenant can be restored later via restore().",
 )
-async def deactivate_tenant(tenant_id: int) -> DeleteSuccessResponse:
-    """Deactivate a tenant (soft delete)."""
+async def deactivate_tenant(tenant_id: UUID) -> DeleteSuccessResponse:
+    """Soft-delete a tenant."""
     await tenant_service.deactivate_tenant(tenant_id)
     return DeleteSuccessResponse()
 
@@ -211,7 +167,7 @@ async def deactivate_tenant(tenant_id: int) -> DeleteSuccessResponse:
     description="⚠️ DANGER: Permanently delete tenant and their database. This cannot be undone!",
 )
 async def delete_tenant_permanently(
-    tenant_id: int, confirm: Annotated[bool, Query()] = False
+    tenant_id: UUID, confirm: Annotated[bool, Query()] = False
 ) -> JSONResponse | None:
     """
     Permanently delete a tenant and their database.
