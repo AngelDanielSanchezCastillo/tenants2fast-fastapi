@@ -18,15 +18,15 @@ import sqlalchemy as sa
 import sqlmodel
 
 from pgsqlasync2fast_fastapi.migration_helpers import (
-    migrate_fk_to_uuid,
-    migrate_pk_to_uuid,
+    add_soft_delete_columns_alembic,
+    migrate_fk_to_uuid_alembic,
+    migrate_pk_to_uuid_alembic,
 )
-from ..helpers import add_soft_delete_columns
 
 
 # revision identifiers, used by Alembic.
 revision: str = '7f8a9b2c3d4e'
-down_revision: Union[str, Sequence[str]] = '1a2b3c4d5e6f'
+down_revision: Union[str, Sequence[str]] = '0001'
 branch_labels: Union[str, Sequence[str], None] = None
 depends_on: Union[str, Sequence[str], None] = None
 
@@ -34,19 +34,19 @@ depends_on: Union[str, Sequence[str], None] = None
 def upgrade() -> None:
     """Upgrade schema: bigint → UUID + soft-delete."""
     # 1. Add soft-delete columns (before any PK/FK changes)
-    add_soft_delete_columns('tenants')
-    add_soft_delete_columns('tenant_users')
+    add_soft_delete_columns_alembic(op, 'tenants')
+    add_soft_delete_columns_alembic(op, 'tenant_users')
 
     # 2. Drop is_active from tenants (replaced by soft-delete)
     op.drop_column('tenants', 'is_active')
 
     # 3. Migrate PKs first (FKs temporarily broken, but that's OK)
-    migrate_pk_to_uuid('tenants')
-    migrate_pk_to_uuid('tenant_users')
+    migrate_pk_to_uuid_alembic(op, 'tenants')
+    migrate_pk_to_uuid_alembic(op, 'tenant_users')
 
     # 4. Migrate FKs (now that referenced PKs are UUID)
-    migrate_fk_to_uuid('tenant_users', 'user_id', 'users')
-    migrate_fk_to_uuid('tenant_users', 'tenant_id', 'tenants')
+    migrate_fk_to_uuid_alembic(op, 'tenant_users', 'user_id', 'users')
+    migrate_fk_to_uuid_alembic(op, 'tenant_users', 'tenant_id', 'tenants')
 
 
 def downgrade() -> None:

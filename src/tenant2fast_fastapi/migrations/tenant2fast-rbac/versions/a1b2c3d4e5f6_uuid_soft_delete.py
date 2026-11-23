@@ -17,15 +17,15 @@ from typing import Sequence, Union
 from alembic import op
 
 from pgsqlasync2fast_fastapi.migration_helpers import (
-    migrate_fk_to_uuid,
-    migrate_pk_to_uuid,
+    add_soft_delete_columns_alembic,
+    migrate_fk_to_uuid_alembic,
+    migrate_pk_to_uuid_alembic,
 )
-from ..helpers import add_soft_delete_columns
 
 
 # revision identifiers, used by Alembic.
 revision: str = 'a1b2c3d4e5f6'
-down_revision: Union[str, Sequence[str]] = '9e8d7c6b5a4f'
+down_revision: Union[str, Sequence[str]] = '0001'
 branch_labels: Union[str, Sequence[str], None] = None
 depends_on: Union[str, Sequence[str], None] = None
 
@@ -51,7 +51,7 @@ def upgrade() -> None:
     """Upgrade schema: bigint → UUID + soft-delete."""
     # 1. Add soft-delete columns to every table.
     for table in _ALL_TABLES:
-        add_soft_delete_columns(table)
+        add_soft_delete_columns_alembic(op, table)
 
     # 2. Drop is_active from tables that had it (replaced by soft-delete).
     for table in _IS_ACTIVE_TABLES:
@@ -59,27 +59,27 @@ def upgrade() -> None:
 
     # 3. Migrate PKs for all tables (FKs temporarily broken).
     for table in _ALL_TABLES:
-        migrate_pk_to_uuid(table)
+        migrate_pk_to_uuid_alembic(op, table)
 
     # 4. Migrate FKs in assignment tables (now that referenced PKs are UUID).
     # role_users: user_id → users.id, role_id → roles.id
-    migrate_fk_to_uuid('role_users', 'user_id', 'users')
-    migrate_fk_to_uuid('role_users', 'role_id', 'roles')
+    migrate_fk_to_uuid_alembic(op, 'role_users', 'user_id', 'users')
+    migrate_fk_to_uuid_alembic(op, 'role_users', 'role_id', 'roles')
 
     # permission_roles: role_id → roles.id, permission_id → permissions.id
-    migrate_fk_to_uuid('permission_roles', 'role_id', 'roles')
-    migrate_fk_to_uuid('permission_roles', 'permission_id', 'permissions')
+    migrate_fk_to_uuid_alembic(op, 'permission_roles', 'role_id', 'roles')
+    migrate_fk_to_uuid_alembic(op, 'permission_roles', 'permission_id', 'permissions')
 
     # permission_routes: permission_id → permissions.id, route_id → routes.id
-    migrate_fk_to_uuid('permission_routes', 'permission_id', 'permissions')
-    migrate_fk_to_uuid('permission_routes', 'route_id', 'routes')
+    migrate_fk_to_uuid_alembic(op, 'permission_routes', 'permission_id', 'permissions')
+    migrate_fk_to_uuid_alembic(op, 'permission_routes', 'route_id', 'routes')
 
     # permission_users: user_id → users.id, permission_id → permissions.id
-    migrate_fk_to_uuid('permission_users', 'user_id', 'users')
-    migrate_fk_to_uuid('permission_users', 'permission_id', 'permissions')
+    migrate_fk_to_uuid_alembic(op, 'permission_users', 'user_id', 'users')
+    migrate_fk_to_uuid_alembic(op, 'permission_users', 'permission_id', 'permissions')
 
     # permissions: permission_category_id → categories.id
-    migrate_fk_to_uuid('permissions', 'permission_category_id', 'categories')
+    migrate_fk_to_uuid_alembic(op, 'permissions', 'permission_category_id', 'categories')
 
 
 def downgrade() -> None:

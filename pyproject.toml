@@ -33,6 +33,8 @@ dependencies = [
     "oauth2fast-fastapi>=0.8.0",
     # 0.4.0+ ships UUIDIdMixin, SoftDeleteMixin, and soft-delete helpers.
     "tools2fast-fastapi>=0.4.0",
+    # 0.7.0+ ships Alembic-specific migration helpers (op-based).
+    "pgsqlasync2fast-fastapi @ file:///home/solautyc/repos/GitHub/pgsqlasync2fast-fastapi",
     # 0.6.0+ ships the shared Alembic runner/env/registry and migration
     # helpers (migrate_pk_to_uuid, migrate_fk_to_uuid, add_soft_delete).
     "pgsqlasync2fast-fastapi>=0.6.0",
