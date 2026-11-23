@@ -10,16 +10,27 @@ is_active with SoftDeleteMixin (deleted_at + deleted_by):
 - categories, roles, routes, users, permissions (core)
 - role_users, permission_roles, permission_routes, permission_users (assignments)
 
-Order: add soft-delete columns → drop is_active → migrate PKs → migrate FKs.
+Two-phase, FK-safe:
+1. prepare PKs for every table (add id_uuid + backfill, keep old integer id)
+2. prepare FKs (add <fk>_uuid + join-backfill via parent.id_uuid / old int id)
+3. finalize: drop child FK constraints → swap PKs → swap FKs → recreate
+   constraints/indexes → recreate the permission_roles UNIQUE constraint
+
+The tenant-local ``users.auth_user_id`` references the auth ``users.id``
+(external DB, already UUID): it is converted with no backfill because the old
+integer ids cannot be mapped to the external UUID space.
 """
 from typing import Sequence, Union
 
 from alembic import op
+import sqlalchemy as sa
 
 from pgsqlasync2fast_fastapi.migration_helpers import (
     add_soft_delete_columns_alembic,
-    migrate_fk_to_uuid_alembic,
-    migrate_pk_to_uuid_alembic,
+    convert_unique_column_to_uuid_alembic,
+    finalize_uuid_alembic,
+    prepare_fk_uuid_alembic,
+    prepare_pk_uuid_alembic,
 )
 
 
@@ -33,7 +44,7 @@ depends_on: Union[str, Sequence[str], None] = None
 # Tables that carry is_active (replaced by soft-delete).
 _IS_ACTIVE_TABLES = ("users", "roles", "permissions")
 
-# All tenant RBAC tables (core + assignments).
+# All tenant RBAC tables (core + assignments), parents before children.
 _ALL_TABLES = (
     "categories",
     "roles",
@@ -46,52 +57,58 @@ _ALL_TABLES = (
     "permission_users",
 )
 
+# (child_table, fk_column, parent_table)
+_FK_RELATIONS = (
+    ("permissions", "permission_category_id", "categories"),
+    ("role_users", "user_id", "users"),
+    ("role_users", "role_id", "roles"),
+    ("permission_roles", "role_id", "roles"),
+    ("permission_roles", "permission_id", "permissions"),
+    ("permission_routes", "permission_id", "permissions"),
+    ("permission_routes", "route_id", "routes"),
+    ("permission_users", "user_id", "users"),
+    ("permission_users", "permission_id", "permissions"),
+)
+
 
 def upgrade() -> None:
-    """Upgrade schema: bigint → UUID + soft-delete."""
-    # 1. Add soft-delete columns to every table.
+    """Upgrade schema: bigint → UUID + soft-delete (two-phase, FK-safe)."""
+    # --- Soft-delete columns + drop is_active -----------------------------
     for table in _ALL_TABLES:
         add_soft_delete_columns_alembic(op, table)
-
-    # 2. Drop is_active from tables that had it (replaced by soft-delete).
     for table in _IS_ACTIVE_TABLES:
         op.drop_column(table, 'is_active')
 
-    # 3. Migrate PKs for all tables (FKs temporarily broken).
+    # --- Phase 1: prepare PKs and FKs (old integer columns kept) ----------
     for table in _ALL_TABLES:
-        migrate_pk_to_uuid_alembic(op, table)
+        prepare_pk_uuid_alembic(op, table)
 
-    # 4. Migrate FKs in assignment tables (now that referenced PKs are UUID).
-    # role_users: user_id → users.id, role_id → roles.id
-    migrate_fk_to_uuid_alembic(op, 'role_users', 'user_id', 'users')
-    migrate_fk_to_uuid_alembic(op, 'role_users', 'role_id', 'roles')
+    # permissions.permission_category_id is nullable in the baseline model.
+    prepare_fk_uuid_alembic(
+        op, "permissions", "permission_category_id", "categories", nullable=True
+    )
+    for child, fk_column, parent in _FK_RELATIONS:
+        if child == "permissions" and fk_column == "permission_category_id":
+            continue  # already prepared (nullable) above
+        prepare_fk_uuid_alembic(op, child, fk_column, parent, nullable=False)
 
-    # permission_roles: role_id → roles.id, permission_id → permissions.id
-    migrate_fk_to_uuid_alembic(op, 'permission_roles', 'role_id', 'roles')
-    migrate_fk_to_uuid_alembic(op, 'permission_roles', 'permission_id', 'permissions')
+    # users.auth_user_id → external auth users.id: no local backfill.
+    convert_unique_column_to_uuid_alembic(op, "users", "auth_user_id")
 
-    # permission_routes: permission_id → permissions.id, route_id → routes.id
-    migrate_fk_to_uuid_alembic(op, 'permission_routes', 'permission_id', 'permissions')
-    migrate_fk_to_uuid_alembic(op, 'permission_routes', 'route_id', 'routes')
-
-    # permission_users: user_id → users.id, permission_id → permissions.id
-    migrate_fk_to_uuid_alembic(op, 'permission_users', 'user_id', 'users')
-    migrate_fk_to_uuid_alembic(op, 'permission_users', 'permission_id', 'permissions')
-
-    # permissions: permission_category_id → categories.id
-    migrate_fk_to_uuid_alembic(op, 'permissions', 'permission_category_id', 'categories')
+    # --- Phase 2: finalize swap (FK-safe order) ---------------------------
+    finalize_uuid_alembic(
+        op,
+        pk_tables=_ALL_TABLES,
+        fk_relations=_FK_RELATIONS,
+        unique_constraints=[
+            ("permission_roles", "uq_permission_roles_role_permission", ("role_id", "permission_id")),
+        ],
+    )
 
 
 def downgrade() -> None:
-    """Downgrade schema: UUID → bigint, remove soft-delete columns."""
-    # 1. Re-add is_active for tables that had it.
-    for table in _IS_ACTIVE_TABLES:
-        op.add_column(
-            table,
-            sa.Column('is_active', sa.Boolean(), nullable=False, server_default=sa.true()),
-        )
-
-    # 2. Drop soft-delete columns (reverse order of tables).
-    for table in reversed(_ALL_TABLES):
-        op.drop_column(table, 'deleted_by')
-        op.drop_column(table, 'deleted_at')
+    """Downgrade schema: not supported (destructive)."""
+    raise NotImplementedError(
+        "Downgrade not supported: UUID→BigInteger is destructive. "
+        "Rebuild the database instead."
+    )

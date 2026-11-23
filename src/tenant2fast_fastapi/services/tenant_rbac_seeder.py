@@ -30,7 +30,7 @@ from uuid import UUID
 
 from sqlmodel.ext.asyncio.session import AsyncSession
 from sqlmodel import select
-from tools2fast_fastapi import active_only
+from tools2fast_fastapi import active_only as active_only_query
 
 from ..models.role_model import Role
 from ..models.permission_category_model import Category
@@ -279,7 +279,7 @@ async def reseed_all_rbac(
     global_manifest: list,
     tenant_manifest: list,
     *,
-    active_only_flag: bool = True,
+    active_only: bool = True,
 ) -> dict[str, Any]:
     """
     Re-seed RBAC for a multi-tenant deployment (GLOBAL + TENANT planes).
@@ -289,7 +289,7 @@ async def reseed_all_rbac(
 
     1. GLOBAL routes are seeded on the auth DB via
        ``permissions2fast_fastapi.seed_global_routes`` (auth engine "auth").
-    2. Active tenants are enumerated from the auth DB (``active_only_flag`` filters
+    2. Active tenants are enumerated from the auth DB (``active_only`` filters
        ``Tenant.deleted_at IS NULL``).
     3. For each tenant: ``seed(profile, tenant_id)`` (roles, categories,
        permissions + Owner grant) and then
@@ -300,7 +300,7 @@ async def reseed_all_rbac(
         profile: Active profile (e.g. ``"dev"`` or ``"prod"``).
         global_manifest: List of permissions2fast ``RouteSpec`` (GLOBAL plane).
         tenant_manifest: List of tenants2fast ``RouteSpec`` (TENANT plane).
-        active_only_flag: When True (default) only tenants with
+        active_only: When True (default) only tenants with
             ``deleted_at IS NULL`` are re-seeded; when False every tenant is included.
 
     Returns:
@@ -339,10 +339,10 @@ async def reseed_all_rbac(
                 logger.exception(msg)
                 summary["errors"].append(msg)
 
-            # 2. Enumerar tenants (filtro activos cuando active_only_flag=True).
+            # 2. Enumerar tenants (filtro activos cuando active_only=True).
             stmt = select(Tenant)
-            if active_only_flag:
-                stmt = active_only(stmt)
+            if active_only:
+                stmt = active_only_query(stmt)
             result = await session.exec(stmt)
             tenants = result.all()
             summary["total"] = len(tenants)

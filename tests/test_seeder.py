@@ -96,15 +96,16 @@ async def test_seed_permissions_by_name_maps_category():
         # Note: _seed_table_idempotent doesn't do FK resolution, that's done in seed()
         # So we manually set the FK after seeding the category
         category = (await session.exec(select(Category).where(Category.name == "System"))).one()
-        
-        perm = Permission(name="view_tenant_info", permission_category_id=category.id)
+        cat_id = category.id
+
+        perm = Permission(name="view_tenant_info", permission_category_id=cat_id)
         session.add(perm)
         await session.commit()
-        
+
         perms = (await session.exec(select(Permission))).all()
         assert len(perms) == 1
         assert perms[0].name == "view_tenant_info"
-        assert perms[0].permission_category_id == category.id
+        assert perms[0].permission_category_id == cat_id
     await engine.dispose()
 
 
@@ -113,7 +114,7 @@ async def test_seed_permissions_reseed_updates_category_without_duplicating():
     """Reseed updates permission_category_id when it differs; no duplicate rows."""
     engine = await _tenant_engine()
     
-    async with AsyncSession(engine) as session:
+    async with AsyncSession(engine, expire_on_commit=False) as session:
         # Seed two categories
         await _seed_table_idempotent(
             session,
@@ -124,30 +125,32 @@ async def test_seed_permissions_reseed_updates_category_without_duplicating():
         
         system_cat = (await session.exec(select(Category).where(Category.name == "System"))).one()
         users_cat = (await session.exec(select(Category).where(Category.name == "Users"))).one()
+        system_id = system_cat.id
+        users_id = users_cat.id
         
         # Seed permission with System category
-        perm1 = Permission(name="view_tenant_info", permission_category_id=system_cat.id)
+        perm1 = Permission(name="view_tenant_info", permission_category_id=system_id)
         session.add(perm1)
         await session.commit()
         await session.refresh(perm1)
         
         # Update to Users category
-        perm1.permission_category_id = users_cat.id
+        perm1.permission_category_id = users_id
         session.add(perm1)
         await session.commit()
         
         perms = (await session.exec(select(Permission))).all()
         assert len(perms) == 1
-        assert perms[0].permission_category_id == users_cat.id
+        assert perms[0].permission_category_id == users_id
         
         # Second identical update -> state unchanged (idempotent)
-        perm1.permission_category_id = users_cat.id
+        perm1.permission_category_id = users_id
         session.add(perm1)
         await session.commit()
         
         perms = (await session.exec(select(Permission))).all()
         assert len(perms) == 1
-        assert perms[0].permission_category_id == users_cat.id
+        assert perms[0].permission_category_id == users_id
     await engine.dispose()
 
 

@@ -4,12 +4,14 @@ Revision ID: 7f8a9b2c3d4e
 Revises: 0001
 Create Date: 2026-11-23
 
-Migrates:
+Migrates (two-phase, FK-safe):
 - tenants: id BigInteger → UUID, is_active → deleted_at + deleted_by
 - tenant_users: id BigInteger → UUID, user_id/tenant_id BigInteger → UUID,
   add deleted_at + deleted_by
 
-Order: soft-delete columns → drop is_active → migrate PKs → migrate FKs.
+Phase 1 (prepare) adds UUID columns and backfills while the old integer
+columns still exist. Phase 2 (finalize) drops child FK constraints first, then
+swaps PKs, then swaps FKs and recreates constraints/indexes.
 """
 from typing import Sequence, Union
 
@@ -19,8 +21,9 @@ import sqlmodel
 
 from pgsqlasync2fast_fastapi.migration_helpers import (
     add_soft_delete_columns_alembic,
-    migrate_fk_to_uuid_alembic,
-    migrate_pk_to_uuid_alembic,
+    finalize_uuid_alembic,
+    prepare_fk_uuid_alembic,
+    prepare_pk_uuid_alembic,
 )
 
 
@@ -33,58 +36,36 @@ depends_on: Union[str, Sequence[str], None] = None
 
 def upgrade() -> None:
     """Upgrade schema: bigint → UUID + soft-delete."""
-    # 1. Add soft-delete columns (before any PK/FK changes)
+    # --- Soft-delete columns + drop is_active -----------------------------
     add_soft_delete_columns_alembic(op, 'tenants')
     add_soft_delete_columns_alembic(op, 'tenant_users')
-
-    # 2. Drop is_active from tenants (replaced by soft-delete)
     op.drop_column('tenants', 'is_active')
 
-    # 3. Migrate PKs first (FKs temporarily broken, but that's OK)
-    migrate_pk_to_uuid_alembic(op, 'tenants')
-    migrate_pk_to_uuid_alembic(op, 'tenant_users')
+    # --- Phase 1: prepare UUID columns (old integer columns kept) ---------
+    prepare_pk_uuid_alembic(op, 'tenants')
+    prepare_pk_uuid_alembic(op, 'tenant_users')
 
-    # 4. Migrate FKs (now that referenced PKs are UUID)
-    migrate_fk_to_uuid_alembic(op, 'tenant_users', 'user_id', 'users')
-    migrate_fk_to_uuid_alembic(op, 'tenant_users', 'tenant_id', 'tenants')
+    # tenant_users.tenant_id → tenants (same chain): join-backfill works.
+    prepare_fk_uuid_alembic(op, 'tenant_users', 'tenant_id', 'tenants', nullable=False)
+
+    # tenant_users.user_id → users (external, already UUID in oauth2fast 0.8):
+    # no local id_uuid to join, so add the UUID column without backfill.
+    op.add_column('tenant_users', sa.Column('user_id_uuid', sa.Uuid(), nullable=True))
+
+    # --- Phase 2: finalize swap (FK-safe order) ---------------------------
+    finalize_uuid_alembic(
+        op,
+        pk_tables=['tenants', 'tenant_users'],
+        fk_relations=[
+            ('tenant_users', 'user_id', 'users'),
+            ('tenant_users', 'tenant_id', 'tenants'),
+        ],
+    )
 
 
 def downgrade() -> None:
     """Downgrade schema: UUID → bigint, remove soft-delete columns."""
-    # Re-add is_active
-    op.add_column(
-        'tenants',
-        sa.Column('is_active', sa.Boolean(), nullable=False, server_default=sa.true()),
+    raise NotImplementedError(
+        "Downgrade not supported: UUID→BigInteger is destructive. "
+        "Rebuild the database instead."
     )
-
-    # Downgrade PKs back to BigInteger (simplified — data loss expected)
-    op.drop_column('tenant_users', 'id')
-    op.add_column(
-        'tenant_users',
-        sa.Column('id', sa.BigInteger(), primary_key=True, autoincrement=True),
-    )
-
-    op.drop_column('tenants', 'id')
-    op.add_column(
-        'tenants',
-        sa.Column('id', sa.BigInteger(), primary_key=True, autoincrement=True),
-    )
-
-    # Downgrade FKs back to BigInteger (simplified)
-    op.drop_column('tenant_users', 'tenant_id')
-    op.add_column(
-        'tenant_users',
-        sa.Column('tenant_id', sa.BigInteger(), sa.ForeignKey('tenants.id', ondelete='CASCADE')),
-    )
-
-    op.drop_column('tenant_users', 'user_id')
-    op.add_column(
-        'tenant_users',
-        sa.Column('user_id', sa.BigInteger(), sa.ForeignKey('users.id', ondelete='CASCADE')),
-    )
-
-    # Remove soft-delete columns
-    op.drop_column('tenant_users', 'deleted_by')
-    op.drop_column('tenant_users', 'deleted_at')
-    op.drop_column('tenants', 'deleted_by')
-    op.drop_column('tenants', 'deleted_at')
