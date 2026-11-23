@@ -173,9 +173,9 @@ async def test_reseed_all_rbac_seeds_globals_and_active_tenants(monkeypatch):
     await _add_tenants(
         auth_engine,
         [
-            {"name": "Active One", "slug": "active-one", "database_name": "t_1", "is_active": True},
-            {"name": "Active Two", "slug": "active-two", "database_name": "t_2", "is_active": True},
-            {"name": "Inactive", "slug": "inactive", "database_name": "t_3", "is_active": False},
+            {"name": "Active One", "slug": "active-one", "database_name": "t_1"},
+            {"name": "Active Two", "slug": "active-two", "database_name": "t_2"},
+            {"name": "Inactive", "slug": "inactive", "database_name": "t_3", "deleted_at": "2026-01-01T00:00:00+00:00"},
         ],
     )
 
@@ -231,8 +231,8 @@ async def test_reseed_all_rbac_active_only_false_includes_inactive(monkeypatch):
     await _add_tenants(
         auth_engine,
         [
-            {"name": "Active", "slug": "active", "database_name": "t_1", "is_active": True},
-            {"name": "Inactive", "slug": "inactive", "database_name": "t_2", "is_active": False},
+            {"name": "Active", "slug": "active", "database_name": "t_1"},
+            {"name": "Inactive", "slug": "inactive", "database_name": "t_2", "deleted_at": "2026-01-01T00:00:00+00:00"},
         ],
     )
 
@@ -270,9 +270,9 @@ async def test_reseed_all_rbac_tenant_failure_is_non_fatal(monkeypatch):
     await _add_tenants(
         auth_engine,
         [
-            {"name": "Good", "slug": "good", "database_name": "t_1", "is_active": True},
-            {"name": "Bad", "slug": "bad", "database_name": "t_2", "is_active": True},
-            {"name": "Also Good", "slug": "also-good", "database_name": "t_3", "is_active": True},
+            {"name": "Good", "slug": "good", "database_name": "t_1"},
+            {"name": "Bad", "slug": "bad", "database_name": "t_2"},
+            {"name": "Also Good", "slug": "also-good", "database_name": "t_3"},
         ],
     )
 

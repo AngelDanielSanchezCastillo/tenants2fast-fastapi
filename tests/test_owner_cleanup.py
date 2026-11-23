@@ -49,8 +49,8 @@ async def _tenant_engine():
 async def _seed_orphan_state(engine, *, owner_has_grant: bool = True):
     """Seed Owner + orphan OWNER + permissions + grants (with/without merge pairs)."""
     async with AsyncSession(engine) as session:
-        session.add(Role(id=OWNER_ID, name="Owner", is_active=True))
-        session.add(Role(id=ORPHAN_ID, name="OWNER", is_active=True))
+        session.add(Role(id=OWNER_ID, name="Owner"))
+        session.add(Role(id=ORPHAN_ID, name="OWNER"))
         session.add(Permission(id=1, name="p1"))
         session.add(Permission(id=2, name="p2"))
         session.add(User(id=1, auth_user_id=11))
@@ -209,7 +209,7 @@ async def test_cleanup_creates_owner_defensively_when_missing(monkeypatch, tmp_p
 
     engine = await _tenant_engine()
     async with AsyncSession(engine) as session:
-        session.add(Role(id=ORPHAN_ID, name="OWNER", is_active=True))
+        session.add(Role(id=ORPHAN_ID, name="OWNER"))
         session.add(Permission(id=1, name="p1"))
         session.add(User(id=1, auth_user_id=11))
         session.add(PermissionRole(id=101, role_id=ORPHAN_ID, permission_id=1))
@@ -240,7 +240,7 @@ async def test_cleanup_dry_run_without_owner_reports_projections_without_crashin
 
     engine = await _tenant_engine()
     async with AsyncSession(engine) as session:
-        session.add(Role(id=ORPHAN_ID, name="OWNER", is_active=True))
+        session.add(Role(id=ORPHAN_ID, name="OWNER"))
         session.add(Permission(id=1, name="p1"))
         session.add(User(id=1, auth_user_id=11))
         session.add(PermissionRole(id=101, role_id=ORPHAN_ID, permission_id=1))

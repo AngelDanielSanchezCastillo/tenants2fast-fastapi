@@ -1,6 +1,6 @@
 """uuid_v7 + soft-delete for tenant RBAC tables
 
-Revision ID: 0002
+Revision ID: a1b2c3d4e5f6
 Revises: 0001
 Create Date: 2026-11-23
 
@@ -24,8 +24,8 @@ from ..helpers import add_soft_delete_columns
 
 
 # revision identifiers, used by Alembic.
-revision: str = '0002'
-down_revision: Union[str, Sequence[str]] = '0001'
+revision: str = 'a1b2c3d4e5f6'
+down_revision: Union[str, Sequence[str]] = '9e8d7c6b5a4f'
 branch_labels: Union[str, Sequence[str], None] = None
 depends_on: Union[str, Sequence[str], None] = None
 
