@@ -1,6 +1,6 @@
 """initial
 
-Revision ID: 1a2b3c4d5e6f
+Revision ID: 0001
 Revises: 
 Create Date: 2026-09-17 08:06:02.859407
 
