@@ -1,5 +1,7 @@
 import re
 from typing import List, Optional, Any
+from uuid import UUID
+
 from sqlmodel.ext.asyncio.session import AsyncSession
 from sqlmodel import select
 
@@ -23,7 +25,7 @@ class TenantAccessService(AccessServiceProtocol):
     """
 
     async def check_user_access(
-        self, auth_user_id: int, route_path: str, method: str, session: AsyncSession
+        self, auth_user_id: UUID, route_path: str, method: str, session: AsyncSession
     ) -> bool:
         """
         Check if a user has access to a specific route.
@@ -46,7 +48,7 @@ class TenantAccessService(AccessServiceProtocol):
         # 3. Evaluate access against permissions
         return self.evaluate_route_access(permissions, route_path, method)
 
-    async def get_user_permissions(self, tenant_user_id: int, session: AsyncSession) -> List[dict]:
+    async def get_user_permissions(self, tenant_user_id: UUID, session: AsyncSession) -> List[dict]:
         """
         Resolve all permissions for a user.
         Returns a list of permission objects with their associated routes.
@@ -85,7 +87,7 @@ class TenantAccessService(AccessServiceProtocol):
         # Combine: overrides first, then roles
         return direct_perms + role_perms
 
-    async def _get_permission_routes(self, permission_id: int, session: AsyncSession) -> List[dict]:
+    async def _get_permission_routes(self, permission_id: UUID, session: AsyncSession) -> List[dict]:
         """Internal helper to get routes for a permission."""
         result = await session.exec(select(Route)
             .join(PermissionRoute)
@@ -103,7 +105,7 @@ class TenantAccessService(AccessServiceProtocol):
         for perm in resolved_permissions:
             # If the permission is explicitly denied by an override, skip this permission
             if not perm["is_allowed"]:
-                # However, if it's a direct deny override, we should probably stop evaluating?
+                # However, if there's a direct DENY override, we should probably stop evaluating?
                 # Usually overrides take absolute precedence.
                 # If we find a direct DENY override for a route that matches, return False.
                 for route in perm["routes"]:

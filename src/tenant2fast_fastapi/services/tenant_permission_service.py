@@ -1,4 +1,6 @@
 from typing import List, Optional, Any
+from uuid import UUID
+
 from sqlmodel.ext.asyncio.session import AsyncSession
 from sqlmodel import select
 
@@ -49,7 +51,7 @@ class TenantPermissionService(PermissionServiceProtocol):
         return permission
 
     async def get_permission(
-        self, permission_id: int, session: AsyncSession
+        self, permission_id: UUID, session: AsyncSession
     ) -> Optional[Permission]:
         """Get permission by ID."""
         result = await session.exec(select(Permission).where(Permission.id == permission_id))
@@ -63,7 +65,7 @@ class TenantPermissionService(PermissionServiceProtocol):
         return list(result.all())
 
     async def update_permission(
-        self, permission_id: int, permission_data: Any, session: AsyncSession
+        self, permission_id: UUID, permission_data: Any, session: AsyncSession
     ) -> Optional[Permission]:
         """Update a permission's metadata."""
         permission = await self.get_permission(permission_id, session)
@@ -80,19 +82,19 @@ class TenantPermissionService(PermissionServiceProtocol):
         return permission
 
     async def delete_permission(
-        self, permission_id: int, session: AsyncSession
+        self, permission_id: UUID, session: AsyncSession
     ) -> bool:
-        """Permanently delete a permission."""
+        """Soft-delete a permission."""
+        from tools2fast_fastapi import soft_delete
         permission = await self.get_permission(permission_id, session)
         if not permission:
             return False
             
-        await session.delete(permission)
-        await session.commit()
+        await soft_delete(session, permission)
         return True
 
     async def add_permission_route(
-        self, permission_id: int, route_id: int, session: AsyncSession
+        self, permission_id: UUID, route_id: UUID, session: AsyncSession
     ) -> PermissionRoute:
         """Protect a route with a permission."""
         assignment = PermissionRoute(permission_id=permission_id, route_id=route_id)
@@ -102,7 +104,7 @@ class TenantPermissionService(PermissionServiceProtocol):
         return assignment
 
     async def assign_user_permission(
-        self, user_id: int, permission_id: int, session: AsyncSession
+        self, user_id: UUID, permission_id: UUID, session: AsyncSession
     ) -> PermissionUser:
         """Directly assign a permission to a user (override)."""
         assignment = PermissionUser(user_id=user_id, permission_id=permission_id, is_allowed=True)
@@ -112,7 +114,7 @@ class TenantPermissionService(PermissionServiceProtocol):
         return assignment
 
     async def list_user_permissions(
-        self, user_id: int, session: AsyncSession
+        self, user_id: UUID, session: AsyncSession
     ) -> List[Permission]:
         """List all permissions directly assigned to a user."""
         result = await session.exec(select(Permission)
@@ -122,7 +124,7 @@ class TenantPermissionService(PermissionServiceProtocol):
         return list(result.all())
 
     async def remove_user_permission(
-        self, user_id: int, permission_id: int, session: AsyncSession
+        self, user_id: UUID, permission_id: UUID, session: AsyncSession
     ) -> bool:
         """Remove a direct permission assignment from a user."""
         result = await session.exec(select(PermissionUser).where(

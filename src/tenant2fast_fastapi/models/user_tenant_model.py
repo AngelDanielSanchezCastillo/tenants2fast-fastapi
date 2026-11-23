@@ -1,9 +1,11 @@
-from sqlmodel import BigInteger, Column, Field, ForeignKey
+from uuid import UUID
 
-from oauth2fast_fastapi.models.bases import AuthModel
+from sqlmodel import Field
+
+from oauth2fast_fastapi.models.bases import AuthSoftDeleteModel
 
 
-class TenantUser(AuthModel, table=True):
+class TenantUser(AuthSoftDeleteModel, table=True):
     """
     Many-to-many relationship between users and tenants.
     Allows users to belong to multiple tenants.
@@ -11,9 +13,5 @@ class TenantUser(AuthModel, table=True):
 
     __tablename__ = "tenant_users"
 
-    user_id: int = Field(
-        sa_column=Column(BigInteger, ForeignKey("users.id", ondelete="CASCADE"))
-    )
-    tenant_id: int = Field(
-        sa_column=Column(BigInteger, ForeignKey("tenants.id", ondelete="CASCADE"))
-    )
+    user_id: UUID = Field(index=True, foreign_key="users.id", ondelete="CASCADE")
+    tenant_id: UUID = Field(index=True, foreign_key="tenants.id", ondelete="CASCADE")

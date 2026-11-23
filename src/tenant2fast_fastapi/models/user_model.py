@@ -1,3 +1,5 @@
+from uuid import UUID
+
 from sqlmodel import Field
 from .bases import TenantBaseModel
 
@@ -10,10 +12,10 @@ class User(TenantBaseModel, table=True):
 
     __tablename__ = "users"
 
-    auth_user_id: int = Field(index=True, unique=True)
+    auth_user_id: UUID = Field(index=True, unique=True)
 
     # Tenant-specific user info
     is_admin: bool = Field(default=False)
     position: str | None = Field(default=None)
     department: str | None = Field(default=None)
-    is_active: bool = Field(default=True)
+    # is_active removed — soft-delete via SoftDeleteMixin (deleted_at)

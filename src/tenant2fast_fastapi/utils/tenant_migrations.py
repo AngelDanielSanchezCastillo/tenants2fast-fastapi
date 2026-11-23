@@ -4,11 +4,16 @@ Tenant Migration Utilities
 Utilities for managing tenant database schemas and migrations.
 """
 
+from uuid import UUID
+
 from sqlmodel.ext.asyncio.session import AsyncSession
+from tools2fast_fastapi import active_only
+from sqlmodel import select
+
 from ..databases.tenant_db_factory import get_tenant_engine, tenant_metadata
 
 
-async def run_tenant_migrations(tenant_id: int):
+async def run_tenant_migrations(tenant_id: UUID):
     """
     Run migrations on a tenant's database.
     Creates all tables registered in tenant_metadata.
@@ -26,7 +31,7 @@ async def run_tenant_migrations(tenant_id: int):
     print(f"✅ Ran migrations for tenant {tenant_id}")
 
 
-async def seed_tenant_data(tenant_id: int, seed_data: dict | None = None):
+async def seed_tenant_data(tenant_id: UUID, seed_data: dict | None = None):
     """
     Seed initial data for a tenant's database.
 
@@ -43,7 +48,7 @@ async def seed_tenant_data(tenant_id: int, seed_data: dict | None = None):
     print(f"✅ Seeded data for tenant {tenant_id}")
 
 
-async def drop_all_tenant_tables(tenant_id: int):
+async def drop_all_tenant_tables(tenant_id: UUID):
     """
     Drop all tables in a tenant's database.
     USE WITH CAUTION!
@@ -64,13 +69,12 @@ async def run_all_tenant_migrations():
     Run migrations on all active tenant databases.
     Useful when you add new models/fields.
     """
-    from sqlmodel import select
     from pgsqlasync2fast_fastapi.connection import get_manager
     auth_engine = get_manager().get_engine("auth")
     from tenant2fast_fastapi.models.tenant_model import Tenant
     
     async with AsyncSession(auth_engine) as session:
-        result = await session.exec(select(Tenant).where(Tenant.is_active == True))  # noqa: E712
+        result = await session.exec(active_only(select(Tenant)))
         tenants = result.all()
 
         for tenant in tenants:
@@ -87,7 +91,6 @@ async def seed_all_tenants():
     Run the RBAC seeder on all active tenant databases.
     Ensures roles and permissions are up to date across the entire platform.
     """
-    from sqlmodel import select
     from pgsqlasync2fast_fastapi.connection import get_manager
     auth_engine = get_manager().get_engine("auth")
     
@@ -95,7 +98,7 @@ async def seed_all_tenants():
     from ..services.tenant_rbac_seeder import seed_tenant_rbac
 
     async with AsyncSession(auth_engine) as session:
-        result = await session.exec(select(Tenant).where(Tenant.is_active == True))  # noqa: E712
+        result = await session.exec(active_only(select(Tenant)))
         tenants = result.all()
 
         for tenant in tenants:

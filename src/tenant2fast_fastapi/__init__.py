@@ -30,7 +30,7 @@ from .dependencies import (
     set_user_context,
 )
 from .middleware.tenant_middleware import TenantMiddleware
-from .models.bases import TenantAuditBaseModel, TenantBaseModel
+from .models.bases import TenantAuditBaseModel, TenantBaseModel, TenantSoftDeleteModel
 from .models.tenant_model import Tenant, TenantRead
 
 # TENANT route+link seeding (RBAC standardization D2)
@@ -56,6 +56,7 @@ __all__ = [
     "TenantRead",
     "TenantAuditBaseModel",
     "TenantBaseModel",
+    "TenantSoftDeleteModel",
     "TenantMiddleware",
     "get_current_tenant",
     "get_current_user",

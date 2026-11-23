@@ -18,9 +18,10 @@ from tenant2fast_fastapi.databases.tenant_db_factory import (
 async def test_create_get_and_delete_tenant_db(event_loop):
     """
     Full lifecycle test: create, get engine, initialize, dispose, and delete.
-    Note: we use a new random tenant ID to avoid conflicts.
+    Note: we use a new random UUID to avoid conflicts.
     """
-    tenant_id = 9999
+    from uuid import uuid7
+    tenant_id = uuid7()
     db_name = _tenant_db_name(tenant_id)
     
     try:
@@ -51,7 +52,8 @@ async def test_create_get_and_delete_tenant_db(event_loop):
 @pytest.mark.asyncio
 async def test_initialize_schema_is_idempotent():
     """Calling initialize_tenant_schema twice should not raise errors."""
-    tenant_id = 8888
+    from uuid import uuid7
+    tenant_id = uuid7()
     try:
         await create_tenant_database(tenant_id)
         

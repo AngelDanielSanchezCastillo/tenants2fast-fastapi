@@ -1,3 +1,5 @@
+from uuid import UUID
+
 from fastapi import HTTPException, status
 from sqlmodel.ext.asyncio.session import AsyncSession
 from sqlmodel import select
@@ -11,7 +13,7 @@ from ..schemas.rbac.user_schema import TenantUserCreate, TenantUserUpdate
 
 
 async def add_user_to_tenant(
-    tenant_id: int, user_data: TenantUserCreate, tenant_session: AsyncSession
+    tenant_id: UUID, user_data: TenantUserCreate, tenant_session: AsyncSession
 ) -> TenantUserModel:
     """
     Add a user to a tenant.
@@ -66,13 +68,13 @@ async def add_user_to_tenant(
         return tenant_user
 
 
-async def get_tenant_user(user_id: int, session: AsyncSession) -> TenantUserModel | None:
+async def get_tenant_user(user_id: UUID, session: AsyncSession) -> TenantUserModel | None:
     """Get a tenant user by their internal ID."""
     result = await session.exec(select(TenantUserModel).where(TenantUserModel.id == user_id))
     return result.one_or_none()
 
 
-async def get_tenant_user_by_auth_id(auth_user_id: int, session: AsyncSession) -> TenantUserModel | None:
+async def get_tenant_user_by_auth_id(auth_user_id: UUID, session: AsyncSession) -> TenantUserModel | None:
     """Get a tenant user by their Auth user ID."""
     result = await session.exec(select(TenantUserModel).where(TenantUserModel.auth_user_id == auth_user_id)
     )
@@ -89,7 +91,7 @@ async def list_tenant_users(
 
 
 async def update_tenant_user(
-    user_id: int, user_data: TenantUserUpdate, session: AsyncSession
+    user_id: UUID, user_data: TenantUserUpdate, session: AsyncSession
 ) -> TenantUserModel:
     """Update tenant user metadata."""
     tenant_user = await get_tenant_user(user_id, session)
@@ -101,7 +103,7 @@ async def update_tenant_user(
 
     # Only update fields that exist in User model
     update_data = user_data.model_dump(exclude_unset=True)
-    valid_fields = {'position', 'department', 'is_admin', 'is_active'}
+    valid_fields = {'position', 'department', 'is_admin'}
     for key, value in update_data.items():
         if key in valid_fields:
             setattr(tenant_user, key, value)
@@ -113,21 +115,22 @@ async def update_tenant_user(
 
 
 async def remove_user_from_tenant(
-    tenant_id: int, auth_user_id: int, tenant_session: AsyncSession
+    tenant_id: UUID, auth_user_id: UUID, tenant_session: AsyncSession
 ):
     """
     Remove a user from a tenant.
     
-    1. Deletes User from tenant DB.
-    2. Deletes TenantUser mapping from Auth DB.
+    1. Soft-deletes User from tenant DB.
+    2. Soft-deletes TenantUser mapping from Auth DB.
     """
-    # 1. Delete from tenant DB
+    from tools2fast_fastapi import soft_delete
+
+    # 1. Soft-delete from tenant DB
     tenant_user = await get_tenant_user_by_auth_id(auth_user_id, tenant_session)
     if tenant_user:
-        await tenant_session.delete(tenant_user)
-        await tenant_session.commit()
+        await soft_delete(tenant_session, tenant_user)
         
-    # 2. Delete from Auth DB
+    # 2. Soft-delete from Auth DB
     async with await get_manager().get_session("auth") as auth_session:
         result = await auth_session.exec(select(TenantUser).where(
                 TenantUser.tenant_id == tenant_id,
@@ -136,5 +139,4 @@ async def remove_user_from_tenant(
         )
         membership = result.one_or_none()
         if membership:
-            await auth_session.delete(membership)
-            await auth_session.commit()
+            await soft_delete(auth_session, membership)

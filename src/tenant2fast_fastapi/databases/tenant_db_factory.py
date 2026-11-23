@@ -1,3 +1,5 @@
+from uuid import UUID
+
 from pgsqlasync2fast_fastapi import (
     create_database,
     drop_database,
@@ -17,9 +19,11 @@ from ..settings import settings as tenant_settings
 
 # ── Helpers ────────────────────────────────────────────────────────────────────
 
-def _tenant_db_name(tenant_id: int) -> str:
+
+def _tenant_db_name(tenant_id: UUID) -> str:
     """Standard naming convention for tenant databases."""
-    return f"tenant_{tenant_id}"
+    # Use a short hex suffix of the UUID to keep DB names unique and short.
+    return f"tenant_{tenant_id.hex[:12]}"
 
 
 def get_tenant_db_url(tenant_database_name: str) -> str:
@@ -42,7 +46,7 @@ def get_tenant_db_url(tenant_database_name: str) -> str:
         return f"{base_url}/{tenant_database_name}"
 
 
-def get_tenant_engine(tenant_id: int):
+def get_tenant_engine(tenant_id: UUID):
     """
     Get or create an async engine for a specific tenant.
     The engine is cached in the global connection manager to avoid overhead.
@@ -61,7 +65,7 @@ def get_tenant_engine(tenant_id: int):
     raise ValueError(f"Engine for tenant {tenant_id} not initialized. Use register_tenant_engine first.")
 
 
-async def register_tenant_engine(tenant_id: int, database_name: str):
+async def register_tenant_engine(tenant_id: UUID, database_name: str):
     """
     Register a tenant-specific engine in the global manager.
     """
@@ -100,7 +104,8 @@ async def register_tenant_engine(tenant_id: int, database_name: str):
 
 # ── Database Operations ────────────────────────────────────────────────────────
 
-async def create_tenant_database(tenant_id: int) -> str:
+
+async def create_tenant_database(tenant_id: UUID) -> str:
     """
     Create a new physical database for a tenant.
     Returns the name of the created database.
@@ -129,7 +134,7 @@ async def create_tenant_database(tenant_id: int) -> str:
         return db_name
 
 
-async def initialize_tenant_schema(tenant_id: int, metadata: MetaData = tenant_metadata):
+async def initialize_tenant_schema(tenant_id: UUID, metadata: MetaData = tenant_metadata):
     """
     Initialize a tenant's dedicated database schema via the TENANT lane.
 
@@ -160,7 +165,7 @@ async def initialize_tenant_schema(tenant_id: int, metadata: MetaData = tenant_m
     print(f"✅ Initialized schema for tenant {tenant_id}")
 
 
-async def get_tenant_session(tenant_id: int) -> AsyncSession:
+async def get_tenant_session(tenant_id: UUID) -> AsyncSession:
     """
     Get a new AsyncSession for a specific tenant.
     """
@@ -168,7 +173,7 @@ async def get_tenant_session(tenant_id: int) -> AsyncSession:
     return AsyncSession(engine, expire_on_commit=False)
 
 
-async def delete_tenant_database(tenant_id: int):
+async def delete_tenant_database(tenant_id: UUID):
     """
     Drop a tenant's physical database and remove its engine from cache.
     """
@@ -193,7 +198,7 @@ async def delete_tenant_database(tenant_id: int):
         print(f"✅ Database '{db_name}' dropped successfully")
 
 
-async def dispose_tenant_engine(tenant_id: int):
+async def dispose_tenant_engine(tenant_id: UUID):
     """
     Remove a tenant engine from the manager and dispose it.
     """

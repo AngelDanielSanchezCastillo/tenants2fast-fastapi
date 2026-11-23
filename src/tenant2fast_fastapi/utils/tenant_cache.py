@@ -1,5 +1,7 @@
 import json
 from typing import List, Optional
+from uuid import UUID
+
 from ..settings import settings
 
 
@@ -18,7 +20,12 @@ def _get_redis_client():
     return redis.from_url(settings.redis_url, decode_responses=True)
 
 
-async def get_tenant_user_permissions_cache(tenant_id: int, user_id: int) -> Optional[List[dict]]:
+def _uid(value: UUID | str | int) -> str:
+    """Normalize a UUID/int to a stable cache-key string."""
+    return str(value)
+
+
+async def get_tenant_user_permissions_cache(tenant_id: UUID, user_id: UUID) -> Optional[List[dict]]:
     """
     Get tenant user permissions from Redis cache.
     Returns None if cache miss or Redis unavailable.
@@ -28,7 +35,7 @@ async def get_tenant_user_permissions_cache(tenant_id: int, user_id: int) -> Opt
         return None
 
     try:
-        key = f"tenant:{tenant_id}:user:{user_id}:permissions"
+        key = f"tenant:{_uid(tenant_id)}:user:{_uid(user_id)}:permissions"
         data = await client.get(key)
         if data:
             return json.loads(data)
@@ -39,7 +46,7 @@ async def get_tenant_user_permissions_cache(tenant_id: int, user_id: int) -> Opt
 
 
 async def set_tenant_user_permissions_cache(
-    tenant_id: int, user_id: int, permissions: List[dict], ttl: int = None
+    tenant_id: UUID, user_id: UUID, permissions: List[dict], ttl: int = None
 ):
     """
     Store tenant user permissions in Redis cache.
@@ -49,14 +56,14 @@ async def set_tenant_user_permissions_cache(
         return
 
     try:
-        key = f"tenant:{tenant_id}:user:{user_id}:permissions"
+        key = f"tenant:{_uid(tenant_id)}:user:{_uid(user_id)}:permissions"
         time_to_live = ttl or settings.redis_ttl
         await client.set(key, json.dumps(permissions), ex=time_to_live)
     except Exception:
         pass
 
 
-async def invalidate_tenant_user_cache(tenant_id: int, user_id: int):
+async def invalidate_tenant_user_cache(tenant_id: UUID, user_id: UUID):
     """
     Invalidate the permissions cache for a specific user in a tenant.
     Called when roles or permissions are modified.
@@ -66,53 +73,53 @@ async def invalidate_tenant_user_cache(tenant_id: int, user_id: int):
         return
 
     try:
-        key = f"tenant:{tenant_id}:user:{user_id}:permissions"
+        key = f"tenant:{_uid(tenant_id)}:user:{_uid(user_id)}:permissions"
         await client.delete(key)
     except Exception:
         pass
 
 
-async def get_user_tenant_cache(user_id: int) -> Optional[int]:
+async def get_user_tenant_cache(user_id: UUID) -> Optional[str]:
     """Get the cached tenant_id for a global user."""
     client = _get_redis_client()
     if not client:
         return None
     try:
-        data = await client.get(f"user:{user_id}:tenant_id")
-        return int(data) if data else None
+        data = await client.get(f"user:{_uid(user_id)}:tenant_id")
+        return data
     except Exception:
         return None
 
 
-async def set_user_tenant_cache(user_id: int, tenant_id: int, ttl: int = 3600):
+async def set_user_tenant_cache(user_id: UUID, tenant_id: UUID, ttl: int = 3600):
     """Cache the tenant_id for a global user."""
     client = _get_redis_client()
     if not client:
         return
     try:
-        await client.set(f"user:{user_id}:tenant_id", tenant_id, ex=ttl)
+        await client.set(f"user:{_uid(user_id)}:tenant_id", str(tenant_id), ex=ttl)
     except Exception:
         pass
 
 
-async def get_tenant_data_cache(tenant_id: int) -> Optional[dict]:
+async def get_tenant_data_cache(tenant_id: UUID) -> Optional[dict]:
     """Get the cached data for a tenant (Auth DB record)."""
     client = _get_redis_client()
     if not client:
         return None
     try:
-        data = await client.get(f"tenant:{tenant_id}:data")
+        data = await client.get(f"tenant:{_uid(tenant_id)}:data")
         return json.loads(data) if data else None
     except Exception:
         return None
 
 
-async def set_tenant_data_cache(tenant_id: int, data: dict, ttl: int = 3600):
+async def set_tenant_data_cache(tenant_id: UUID, data: dict, ttl: int = 3600):
     """Cache the auth data for a tenant."""
     client = _get_redis_client()
     if not client:
         return
     try:
-        await client.set(f"tenant:{tenant_id}:data", json.dumps(data), ex=ttl)
+        await client.set(f"tenant:{_uid(tenant_id)}:data", json.dumps(data), ex=ttl)
     except Exception:
         pass

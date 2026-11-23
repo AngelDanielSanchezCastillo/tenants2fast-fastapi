@@ -76,9 +76,10 @@ async def test_valid_token_without_tenant_returns_403_tenant_required(test_user)
 async def test_inactive_tenant_returns_403_tenant_inactive(
     test_user, test_tenant, user_tenant_link, session
 ):
+    from datetime import datetime, timezone
     persisted = await session.get(Tenant, test_tenant.id)
     assert persisted is not None
-    persisted.is_active = False
+    persisted.deleted_at = datetime.now(timezone.utc)  # Soft-delete
     session.add(persisted)
     await session.commit()
 

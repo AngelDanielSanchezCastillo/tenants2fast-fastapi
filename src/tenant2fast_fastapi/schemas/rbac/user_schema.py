@@ -1,10 +1,12 @@
-from pydantic import BaseModel, ConfigDict
 from datetime import datetime
+from uuid import UUID
+
+from pydantic import BaseModel, ConfigDict
 
 
 class TenantUserBase(BaseModel):
     """Base schema for TenantUser."""
-    auth_user_id: int
+    auth_user_id: UUID
     position: str | None = None
     department: str | None = None
     is_admin: bool = False
@@ -19,10 +21,11 @@ class TenantUserCreate(TenantUserBase):
 
 class TenantUserRead(TenantUserBase):
     """Schema to read a TenantUser."""
-    id: int
-    is_active: bool = True
+    id: UUID
     created_at: datetime
     updated_at: datetime
+    deleted_at: datetime | None = None
+    deleted_by: UUID | None = None
 
 
 class TenantUserUpdate(BaseModel):
@@ -30,6 +33,5 @@ class TenantUserUpdate(BaseModel):
     position: str | None = None
     department: str | None = None
     is_admin: bool | None = None
-    is_active: bool | None = None
 
     model_config = ConfigDict(from_attributes=True)

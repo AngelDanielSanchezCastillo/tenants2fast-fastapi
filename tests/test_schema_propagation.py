@@ -26,9 +26,9 @@ async def test_run_migrations_and_seed_all_tenants(session):
     """
     # 1. Create two active tenants in Auth DB
     suffix = uuid.uuid4().hex[:6]
-    tenant_a = Tenant(name="Tenant A", slug=f"tenant-a-{suffix}", database_name=f"db_a_{suffix}", is_active=True)
-    tenant_b = Tenant(name="Tenant B", slug=f"tenant-b-{suffix}", database_name=f"db_b_{suffix}", is_active=True)
-    tenant_c = Tenant(name="Tenant C", slug=f"tenant-c-{suffix}", database_name=f"db_c_{suffix}", is_active=False) # Inactive
+    tenant_a = Tenant(name="Tenant A", slug=f"tenant-a-{suffix}", database_name=f"db_a_{suffix}")
+    tenant_b = Tenant(name="Tenant B", slug=f"tenant-b-{suffix}", database_name=f"db_b_{suffix}")
+    tenant_c = Tenant(name="Tenant C", slug=f"tenant-c-{suffix}", database_name=f"db_c_{suffix}")
     
     session.add(tenant_a)
     session.add(tenant_b)
@@ -37,6 +37,12 @@ async def test_run_migrations_and_seed_all_tenants(session):
     await session.refresh(tenant_a)
     await session.refresh(tenant_b)
     await session.refresh(tenant_c)
+
+    # Soft-delete tenant_c (simulating inactive)
+    from datetime import datetime, timezone
+    tenant_c.deleted_at = datetime.now(timezone.utc)
+    session.add(tenant_c)
+    await session.commit()
 
     try:
         # 2. Provision their databases manually (to simulate existing tenants)

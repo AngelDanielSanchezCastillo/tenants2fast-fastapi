@@ -8,13 +8,14 @@ The tenant context is set by middleware and can be accessed via dependency injec
 from collections.abc import AsyncGenerator
 from contextvars import ContextVar
 from datetime import datetime
+from uuid import UUID
 
 from fastapi import Depends, Request
 from oauth2fast_fastapi.models.user_model import User
 from pgsqlasync2fast_fastapi.connection import get_manager
 from sqlmodel import select
 from sqlmodel.ext.asyncio.session import AsyncSession
-from tools2fast_fastapi import AuthError
+from tools2fast_fastapi import AuthError, active_only
 
 from ..databases.tenant_db_factory import get_tenant_session as get_factory_session
 from ..models.tenant_model import Tenant
@@ -59,10 +60,10 @@ async def get_current_tenant(request: Request) -> Tenant:
     Semantics:
 
     - Problems with the token itself (missing/expired/invalid) → 401.
-    - A valid token whose user has no tenant, or an inactive tenant → 403.
+    - A valid token whose user has no tenant, or a soft-deleted tenant → 403.
 
     The middleware records the token problem in ``request.state.auth_error``
-    and an inactive tenant in ``request.state.tenant_inactive``.
+    and a soft-deleted tenant in ``request.state.tenant_inactive``.
     """
     tenant = get_tenant_context()
     user = get_user_context()
@@ -98,7 +99,8 @@ async def get_current_tenant(request: Request) -> Tenant:
             status_code=403,
         )
 
-    if not tenant.is_active:
+    # Soft-delete check: if tenant has deleted_at, it's inactive
+    if tenant.deleted_at is not None:
         raise AuthError(
             error_code="TenantInactive",
             message="El tenant está inactivo",
@@ -139,7 +141,7 @@ async def get_current_user(request: Request) -> User:
     return user
 
 
-async def load_tenant_by_id(tenant_id: int) -> Tenant | None:
+async def load_tenant_by_id(tenant_id: UUID) -> Tenant | None:
     """
     Load tenant from database or cache.
     """
@@ -164,6 +166,8 @@ async def load_tenant_by_id(tenant_id: int) -> Tenant | None:
                 for key, val in data.items():
                     if isinstance(val, (datetime)):
                         data[key] = val.isoformat()
+                    elif isinstance(val, UUID):
+                        data[key] = str(val)
 
                 await cache_tenant_data(tenant_id, data)
 

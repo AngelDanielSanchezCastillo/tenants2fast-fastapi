@@ -1,4 +1,6 @@
 from typing import List, Optional, Any
+from uuid import UUID
+
 from sqlmodel.ext.asyncio.session import AsyncSession
 from sqlmodel import select
 
@@ -24,7 +26,7 @@ class TenantRoleService(RoleServiceProtocol):
         await session.refresh(role)
         return role
 
-    async def get_role(self, role_id: int, session: AsyncSession) -> Optional[Role]:
+    async def get_role(self, role_id: UUID, session: AsyncSession) -> Optional[Role]:
         """Get role by ID."""
         result = await session.exec(select(Role).where(Role.id == role_id))
         return result.one_or_none()
@@ -37,7 +39,7 @@ class TenantRoleService(RoleServiceProtocol):
         return list(result.all())
 
     async def update_role(
-        self, role_id: int, role_data: Any, session: AsyncSession
+        self, role_id: UUID, role_data: Any, session: AsyncSession
     ) -> Optional[Role]:
         """Update a role's metadata."""
         role = await self.get_role(role_id, session)
@@ -53,18 +55,18 @@ class TenantRoleService(RoleServiceProtocol):
         await session.refresh(role)
         return role
 
-    async def delete_role(self, role_id: int, session: AsyncSession) -> bool:
-        """Permanently delete a role."""
+    async def delete_role(self, role_id: UUID, session: AsyncSession) -> bool:
+        """Soft-delete a role."""
+        from tools2fast_fastapi import soft_delete
         role = await self.get_role(role_id, session)
         if not role:
             return False
         
-        await session.delete(role)
-        await session.commit()
+        await soft_delete(session, role)
         return True
 
     async def add_role_permission(
-        self, role_id: int, permission_id: int, session: AsyncSession
+        self, role_id: UUID, permission_id: UUID, session: AsyncSession
     ) -> PermissionRole:
         """Assign a permission to a role."""
         assignment = PermissionRole(role_id=role_id, permission_id=permission_id)
@@ -74,7 +76,7 @@ class TenantRoleService(RoleServiceProtocol):
         return assignment
 
     async def list_role_permissions(
-        self, role_id: int, session: AsyncSession
+        self, role_id: UUID, session: AsyncSession
     ) -> List[Permission]:
         """List all permissions assigned to a role."""
         result = await session.exec(select(Permission)
@@ -84,7 +86,7 @@ class TenantRoleService(RoleServiceProtocol):
         return list(result.all())
 
     async def delete_role_permission(
-        self, role_id: int, permission_id: int, session: AsyncSession
+        self, role_id: UUID, permission_id: UUID, session: AsyncSession
     ) -> bool:
         """Remove a permission from a role."""
         result = await session.exec(select(PermissionRole).where(
@@ -101,7 +103,7 @@ class TenantRoleService(RoleServiceProtocol):
         return True
 
     async def assign_user_role(
-        self, user_id: int, role_id: int, session: AsyncSession
+        self, user_id: UUID, role_id: UUID, session: AsyncSession
     ) -> RoleUser:
         """Assign a role to a user."""
         assignment = RoleUser(user_id=user_id, role_id=role_id)
@@ -111,7 +113,7 @@ class TenantRoleService(RoleServiceProtocol):
         return assignment
 
     async def list_user_roles(
-        self, user_id: int, session: AsyncSession
+        self, user_id: UUID, session: AsyncSession
     ) -> List[Role]:
         """List all roles assigned to a user."""
         result = await session.exec(select(Role)
@@ -121,7 +123,7 @@ class TenantRoleService(RoleServiceProtocol):
         return list(result.all())
 
     async def remove_user_role(
-        self, user_id: int, role_id: int, session: AsyncSession
+        self, user_id: UUID, role_id: UUID, session: AsyncSession
     ) -> bool:
         """Remove a role from a user."""
         result = await session.exec(select(RoleUser).where(

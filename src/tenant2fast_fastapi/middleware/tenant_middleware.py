@@ -5,6 +5,8 @@ This middleware extracts the tenant from the request (headers or user context)
 and sets the tenant-specific database connection for the duration of the request.
 """
 
+from uuid import UUID
+
 from fastapi import Request, Response
 from sqlmodel import select
 from sqlmodel.ext.asyncio.session import AsyncSession
@@ -52,20 +54,26 @@ class TenantMiddleware(BaseHTTPMiddleware):
 
             requested_tenant_id = None
             header_value = request.headers.get(self.header_name)
-            if header_value and header_value.isdigit():
-                requested_tenant_id = int(header_value)
+            if header_value:
+                # Try to parse as UUID first, then fall back to int (legacy)
+                try:
+                    requested_tenant_id = UUID(header_value)
+                except ValueError:
+                    if header_value.isdigit():
+                        requested_tenant_id = int(header_value)
 
             tenant_id = await self._get_user_tenant_id(user.id, requested_tenant_id)
 
             if tenant_id:
                 tenant = await load_tenant_by_id(tenant_id)
-                if tenant and tenant.is_active:
+                # Soft-delete check: tenant.deleted_at is None means active
+                if tenant and tenant.deleted_at is None:
                     set_tenant_context(tenant)
                     await register_tenant_engine(tenant.id, tenant.database_name)
 
-                    request.state.tenant_id = tenant.id
+                    request.state.tenant_id = str(tenant.id)
                     request.state.tenant_slug = tenant.slug
-                elif tenant and not tenant.is_active:
+                elif tenant and tenant.deleted_at is not None:
                     request.state.tenant_inactive = True
 
         response = await call_next(request)
@@ -117,11 +125,11 @@ class TenantMiddleware(BaseHTTPMiddleware):
             return None, "invalid"
 
     async def _get_user_tenant_id(
-        self, user_id: int, requested_tenant_id: int | None = None
-    ) -> int | None:
+        self, user_id: UUID, requested_tenant_id: UUID | int | None = None
+    ) -> UUID | None:
         cached_id = await get_user_tenant_cache(user_id)
-        if cached_id and (not requested_tenant_id or cached_id == requested_tenant_id):
-            return cached_id
+        if cached_id and (not requested_tenant_id or str(cached_id) == str(requested_tenant_id)):
+            return cached_id if isinstance(cached_id, UUID) else UUID(str(cached_id))
 
         from pgsqlasync2fast_fastapi.connection import get_manager
 
@@ -141,7 +149,7 @@ class TenantMiddleware(BaseHTTPMiddleware):
             target_link = None
             if requested_tenant_id:
                 target_link = next(
-                    (l for l in links if l.tenant_id == requested_tenant_id), None
+                    (l for l in links if str(l.tenant_id) == str(requested_tenant_id)), None
                 )
 
             if not target_link:

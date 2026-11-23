@@ -5,6 +5,7 @@ Pydantic schemas for tenant API operations.
 """
 
 from datetime import datetime
+from uuid import UUID
 
 from pydantic import BaseModel, Field, field_validator, ConfigDict
 
@@ -38,21 +39,21 @@ class TenantUpdate(BaseModel):
     name: str | None = Field(None, min_length=1, max_length=255)
     contact_email: str | None = None
     max_users: int | None = Field(None, gt=0)
-    is_active: bool | None = None
 
 
 class TenantRead(BaseModel):
     """Schema for tenant response."""
 
-    id: int
+    id: UUID
     name: str
     slug: str
     database_name: str
-    is_active: bool
     contact_email: str | None = None
     max_users: int | None = None
     created_at: datetime
     updated_at: datetime
+    deleted_at: datetime | None = None
+    deleted_by: UUID | None = None
 
     model_config = ConfigDict(from_attributes=True)
 

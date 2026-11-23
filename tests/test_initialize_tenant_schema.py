@@ -45,15 +45,17 @@ async def test_initialize_tenant_schema_delegates_to_tenant_lane_runner(
 ):
     """Upgrade-to-head of the TENANT lane, not create_all (schema-bootstrap
     spec scenario: create_tenant via upgrade-to-head)."""
+    from uuid import uuid7
+    tenant_id = uuid7()
     fake_runner = AsyncMock()
     monkeypatch.setattr(tenant_db_factory, "run_migrations", fake_runner)
     monkeypatch.setattr(
-        tenant_db_factory, "get_tenant_engine", lambda tenant_id: object()
+        tenant_db_factory, "get_tenant_engine", lambda tid: object()
     )
 
-    await initialize_tenant_schema(42)
+    await initialize_tenant_schema(tenant_id)
 
-    fake_runner.assert_awaited_once_with("tenant_42", get_lane_chains("tenant"))
+    fake_runner.assert_awaited_once_with(f"tenant_{tenant_id}", get_lane_chains("tenant"))
 
 
 @pytest.mark.asyncio
@@ -61,19 +63,21 @@ async def test_initialize_tenant_schema_still_requires_registered_engine(
     monkeypatch,
 ):
     """The pre-change contract (ValueError for an unregistered tenant) holds."""
+    from uuid import uuid7
+    tenant_id = uuid7()
     fake_runner = AsyncMock()
     monkeypatch.setattr(tenant_db_factory, "run_migrations", fake_runner)
 
-    def _missing(tenant_id):
+    def _missing(tid):
         raise ValueError(
-            f"Engine for tenant {tenant_id} not initialized. "
+            f"Engine for tenant {tid} not initialized. "
             "Use register_tenant_engine first."
         )
 
     monkeypatch.setattr(tenant_db_factory, "get_tenant_engine", _missing)
 
     with pytest.raises(ValueError, match="not initialized"):
-        await initialize_tenant_schema(7)
+        await initialize_tenant_schema(tenant_id)
     fake_runner.assert_not_awaited()
 
 

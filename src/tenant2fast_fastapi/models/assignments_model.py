@@ -1,3 +1,5 @@
+from uuid import UUID
+
 from sqlmodel import Field, UniqueConstraint
 
 from .bases import TenantBaseModel
@@ -10,8 +12,8 @@ class RoleUser(TenantBaseModel, table=True):
 
     __tablename__ = "role_users"
 
-    user_id: int = Field(foreign_key="users.id", index=True)
-    role_id: int = Field(foreign_key="roles.id", index=True)
+    user_id: UUID = Field(foreign_key="users.id", index=True)
+    role_id: UUID = Field(foreign_key="roles.id", index=True)
 
 
 class PermissionRole(TenantBaseModel, table=True):
@@ -32,8 +34,8 @@ class PermissionRole(TenantBaseModel, table=True):
         ),
     )
 
-    role_id: int = Field(foreign_key="roles.id", index=True)
-    permission_id: int = Field(foreign_key="permissions.id", index=True)
+    role_id: UUID = Field(foreign_key="roles.id", index=True)
+    permission_id: UUID = Field(foreign_key="permissions.id", index=True)
 
 
 class PermissionRoute(TenantBaseModel, table=True):
@@ -43,8 +45,8 @@ class PermissionRoute(TenantBaseModel, table=True):
 
     __tablename__ = "permission_routes"
 
-    permission_id: int = Field(foreign_key="permissions.id", index=True)
-    route_id: int = Field(foreign_key="routes.id", index=True)
+    permission_id: UUID = Field(foreign_key="permissions.id", index=True)
+    route_id: UUID = Field(foreign_key="routes.id", index=True)
 
 
 class PermissionUser(TenantBaseModel, table=True):
@@ -55,6 +57,6 @@ class PermissionUser(TenantBaseModel, table=True):
 
     __tablename__ = "permission_users"
 
-    user_id: int = Field(foreign_key="users.id", index=True)
-    permission_id: int = Field(foreign_key="permissions.id", index=True)
+    user_id: UUID = Field(foreign_key="users.id", index=True)
+    permission_id: UUID = Field(foreign_key="permissions.id", index=True)
     is_allowed: bool = Field(default=True)

@@ -87,7 +87,7 @@ async def test_create_tenant_surfaces_seed_errors():
     mock_tenant.name = "Test"
     mock_tenant.slug = "test"
     mock_tenant.database_name = "tenant_test"
-    mock_tenant.is_active = True
+    mock_tenant.deleted_at = None  # Active tenant
     mock_tenant.contact_email = "test@test.com"
     mock_tenant.max_users = 5
     mock_tenant.created_at.isoformat.return_value = "2026-01-01T00:00:00"
@@ -169,7 +169,7 @@ async def test_create_tenant_success_path():
     mock_tenant.name = "Test"
     mock_tenant.slug = "test"
     mock_tenant.database_name = "tenant_test"
-    mock_tenant.is_active = True
+    mock_tenant.deleted_at = None  # Active tenant
     mock_tenant.contact_email = "test@test.com"
     mock_tenant.max_users = 5
     mock_tenant.created_at.isoformat.return_value = "2026-01-01T00:00:00"
@@ -249,7 +249,7 @@ async def test_create_tenant_forwards_profile():
     mock_tenant.name = "Test"
     mock_tenant.slug = "test"
     mock_tenant.database_name = "tenant_test"
-    mock_tenant.is_active = True
+    mock_tenant.deleted_at = None  # Active tenant
     mock_tenant.contact_email = "test@test.com"
     mock_tenant.max_users = 5
     mock_tenant.created_at.isoformat.return_value = "2026-01-01T00:00:00"

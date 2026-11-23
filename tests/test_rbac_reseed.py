@@ -98,9 +98,9 @@ def _tenant_session_factory(tenant_engine):
     return _get_tenant_session
 
 
-def _seed_fake(*, fail_tenant_id: int | None = None):
+def _seed_fake(*, fail_tenant_id=None):
     async def fake_seed(profile, tenant_id):
-        if tenant_id == fail_tenant_id:
+        if fail_tenant_id is not None and tenant_id == fail_tenant_id:
             raise RuntimeError("boom")
         return {"tables_seeded": 1, "rows_seeded": 3, "errors": []}
 
@@ -150,18 +150,33 @@ def _patch_infra(monkeypatch, auth_engine, tenant_engine, fake_seed):
 
 
 async def _add_tenants(auth_engine, tenants):
-    """Insert tenants into the auth DB (interleaved with the config category)."""
+    """Insert tenants into the auth DB (interleaved with the config category).
+
+    Returns the created Tenant models so tests can reference their UUIDs.
+    """
+    from datetime import datetime
+
     from permissions2fast_fastapi.models.permission_category_model import (
         PermissionCategory,
     )
     from tenant2fast_fastapi.models.tenant_model import Tenant
 
+    created = []
     async with AsyncSession(auth_engine) as session:
         # The global route permission FK needs a category bucket.
         session.add(PermissionCategory(name="config"))
         for t in tenants:
-            session.add(Tenant(**t))
+            data = dict(t)
+            # SQLite rejects ISO strings for DateTime columns; coerce to datetime.
+            if isinstance(data.get("deleted_at"), str):
+                data["deleted_at"] = datetime.fromisoformat(data["deleted_at"])
+            tenant = Tenant(**data)
+            session.add(tenant)
+            created.append(tenant)
         await session.commit()
+        for tenant in created:
+            await session.refresh(tenant)
+    return created
 
 
 @pytest.mark.asyncio
@@ -170,14 +185,15 @@ async def test_reseed_all_rbac_seeds_globals_and_active_tenants(monkeypatch):
     auth_engine = await _auth_engine()
     tenant_engine = await _tenant_engine()
 
-    await _add_tenants(
+    created = await _add_tenants(
         auth_engine,
         [
-            {"name": "Active One", "slug": "active-one", "database_name": "t_1", "is_active": True},
-            {"name": "Active Two", "slug": "active-two", "database_name": "t_2", "is_active": True},
-            {"name": "Inactive", "slug": "inactive", "database_name": "t_3", "is_active": False},
+            {"name": "Active One", "slug": "active-one", "database_name": "t_1"},
+            {"name": "Active Two", "slug": "active-two", "database_name": "t_2"},
+            {"name": "Inactive", "slug": "inactive", "database_name": "t_3", "deleted_at": "2026-01-01T00:00:00+00:00"},
         ],
     )
+    active_ids = {t.id for t in created if t.name != "Inactive"}
 
     seeded = []
     fake_seed = _seed_fake()
@@ -201,8 +217,8 @@ async def test_reseed_all_rbac_seeds_globals_and_active_tenants(monkeypatch):
     assert summary["errors"] == []
     assert summary["global_routes"] == 1
     assert summary["tenant_routes"] == 2  # one per active tenant
-    # Only the ACTIVE tenants were seeded (ids 1 and 2; inactive is id 3).
-    assert seeded == [1, 2]
+    # Only the ACTIVE tenants were seeded.
+    assert set(seeded) == active_ids
 
     # GLOBAL route landed in the auth DB with its explicit role.
     async with auth_engine.connect() as conn:
@@ -228,13 +244,14 @@ async def test_reseed_all_rbac_active_only_false_includes_inactive(monkeypatch):
     auth_engine = await _auth_engine()
     tenant_engine = await _tenant_engine()
 
-    await _add_tenants(
+    created = await _add_tenants(
         auth_engine,
         [
-            {"name": "Active", "slug": "active", "database_name": "t_1", "is_active": True},
-            {"name": "Inactive", "slug": "inactive", "database_name": "t_2", "is_active": False},
+            {"name": "Active", "slug": "active", "database_name": "t_1"},
+            {"name": "Inactive", "slug": "inactive", "database_name": "t_2", "deleted_at": "2026-01-01T00:00:00+00:00"},
         ],
     )
+    all_ids = {t.id for t in created}
 
     seeded = []
     fake_seed = _seed_fake()
@@ -255,7 +272,7 @@ async def test_reseed_all_rbac_active_only_false_includes_inactive(monkeypatch):
     assert summary["total"] == 2
     assert summary["succeeded"] == 2
     assert summary["failed"] == 0
-    assert seeded == [1, 2]
+    assert set(seeded) == all_ids
 
     await auth_engine.dispose()
     await tenant_engine.dispose()
@@ -267,17 +284,18 @@ async def test_reseed_all_rbac_tenant_failure_is_non_fatal(monkeypatch):
     auth_engine = await _auth_engine()
     tenant_engine = await _tenant_engine()
 
-    await _add_tenants(
+    created = await _add_tenants(
         auth_engine,
         [
-            {"name": "Good", "slug": "good", "database_name": "t_1", "is_active": True},
-            {"name": "Bad", "slug": "bad", "database_name": "t_2", "is_active": True},
-            {"name": "Also Good", "slug": "also-good", "database_name": "t_3", "is_active": True},
+            {"name": "Good", "slug": "good", "database_name": "t_1"},
+            {"name": "Bad", "slug": "bad", "database_name": "t_2"},
+            {"name": "Also Good", "slug": "also-good", "database_name": "t_3"},
         ],
     )
 
-    # Tenant id=2 fails inside seed(); the other two must still succeed.
-    _patch_infra(monkeypatch, auth_engine, tenant_engine, _seed_fake(fail_tenant_id=2))
+    # The "Bad" tenant fails inside seed(); the other two must still succeed.
+    bad_id = next(t.id for t in created if t.name == "Bad")
+    _patch_infra(monkeypatch, auth_engine, tenant_engine, _seed_fake(fail_tenant_id=bad_id))
 
     from tenant2fast_fastapi.services.tenant_rbac_seeder import reseed_all_rbac
 

@@ -7,7 +7,7 @@ name = "tenants2fast-fastapi"
 dynamic = ["version"]
 description = "Multi-tenancy management module for FastAPI with tenant isolation and permission-aware middleware"
 readme = "README.md"
-requires-python = ">=3.10"
+requires-python = ">=3.14"
 license = {file = "LICENSE"}
 authors = [
     {name = "Angel Daniel Sanchez Castillo", email = "angeldaniel.sanchezcastillo@gmail.com"}
@@ -18,10 +18,7 @@ classifiers = [
     "Intended Audience :: Developers",
     "License :: OSI Approved :: MIT License",
     "Programming Language :: Python :: 3",
-    "Programming Language :: Python :: 3.10",
-    "Programming Language :: Python :: 3.11",
-    "Programming Language :: Python :: 3.12",
-    "Programming Language :: Python :: 3.13",
+    "Programming Language :: Python :: 3.14",
     "Framework :: FastAPI",
     "Topic :: Software Development :: Libraries :: Python Modules",
 ]
@@ -29,16 +26,15 @@ classifiers = [
 dependencies = [
     # Pulls in pgsqlasync2fast-fastapi, mailing2fast-fastapi,
     # log2fast-fastapi, sqlmodel, fastapi, pydantic, etc. transitively.
-    # 0.11.0+ ships the standardized 403 auth error contract.
-    "permissions2fast-fastapi>=0.11.0",
+    # 0.12.0+ ships UUID v7 + soft-delete on all permission tables.
+    "permissions2fast-fastapi>=0.12.0",
     # Direct imports of User/token utilities and AuthError.
-    "oauth2fast-fastapi>=0.6.0",
-    "tools2fast-fastapi>=0.3.14",
-    # 0.5.2+ ships the shared Alembic runner/env/registry
-    # (ChainSpec, register_chain/get_lane_chains, run_migrations) that the
-    # package-owned chains depend on. Also provides the shared
-    # insert_if_missing primitive and upsert_by_id for idempotent seeding.
-    "pgsqlasync2fast-fastapi>=0.5.2",
+    # 0.8.0+ ships UUID v7 + soft-delete on users and refresh_tokens.
+    "oauth2fast-fastapi>=0.8.0",
+    # 0.4.0+ ships UUIDIdMixin, SoftDeleteMixin, and soft-delete helpers.
+    "tools2fast-fastapi>=0.4.0",
+    # 0.6.2+ ships the correct two-phase Alembic UUID helpers.
+    "pgsqlasync2fast-fastapi>=0.6.2",
     # Alembic ships the shared migration runner/env/registry.
     "alembic>=1.20.0",
 ]
@@ -99,7 +95,7 @@ asyncio_default_fixture_loop_scope = "session"
 asyncio_default_test_loop_scope = "session"
 
 [tool.mypy]
-python_version = "3.10"
+python_version = "3.14"
 warn_return_any = true
 warn_unused_configs = true
 disallow_untyped_defs = false

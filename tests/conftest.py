@@ -80,7 +80,7 @@ async def session(db_engine) -> AsyncGenerator[AsyncSession, None]:
         if tables:
             table_names = ", ".join([f'"{t}"' for t in tables])
             await conn.execute(
-                text(f"TRUNCATE TABLE {table_names} RESTART IDENTITY CASCADE")
+                text(f"TRUNCATE TABLE {table_names} CASCADE")
             )
 
     async with AsyncSession(db_engine, expire_on_commit=False) as db_session:
@@ -97,7 +97,6 @@ async def test_user(session: AsyncSession) -> User:
         email="test@tenants2fast.dev",
         password="hashed_secret",
         name="Test Tenant User",
-        is_active=True,
         is_verified=True,
     )
     session.add(user)
@@ -118,7 +117,6 @@ async def test_tenant(session: AsyncSession) -> Tenant:
         name="ACME Corp",
         slug=slug,
         database_name=f"test_db_{slug.replace('-', '_')}",
-        is_active=True,
     )
     session.add(tenant)
     await session.commit()
