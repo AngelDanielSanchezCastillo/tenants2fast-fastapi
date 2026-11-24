@@ -48,19 +48,62 @@ def upgrade() -> None:
     # tenant_users.tenant_id → tenants (same chain): join-backfill works.
     prepare_fk_uuid_alembic(op, 'tenant_users', 'tenant_id', 'tenants', nullable=False)
 
-    # tenant_users.user_id → users (external, already UUID in oauth2fast 0.8):
-    # no local id_uuid to join, so add the UUID column without backfill.
+    # tenant_users.user_id → auth users.id (external): oauth2fast >= 0.8.2
+    # drops the FK and leaves a map so old integer ids map to the same UUIDs.
     op.add_column('tenant_users', sa.Column('user_id_uuid', sa.Uuid(), nullable=True))
+    op.execute(
+        """
+        DO $$
+        BEGIN
+            IF to_regclass('_uuid_migration_user_map') IS NOT NULL THEN
+                UPDATE tenant_users AS tu
+                SET user_id_uuid = m.new_uuid
+                FROM _uuid_migration_user_map AS m
+                WHERE m.old_id = tu.user_id
+                  AND tu.user_id_uuid IS NULL;
+            END IF;
+        END $$;
+        """
+    )
 
     # --- Phase 2: finalize swap (FK-safe order) ---------------------------
+    # user_id is swapped manually: oauth2fast already dropped its FK, so the
+    # helper must not try to drop it again.
     finalize_uuid_alembic(
         op,
         pk_tables=['tenants', 'tenant_users'],
         fk_relations=[
-            ('tenant_users', 'user_id', 'users'),
             ('tenant_users', 'tenant_id', 'tenants'),
         ],
     )
+
+    # --- tenant_users.user_id: manual swap (external FK already dropped) --
+    op.drop_column('tenant_users', 'user_id')
+    op.alter_column('tenant_users', 'user_id_uuid', new_column_name='user_id')
+    op.create_foreign_key(
+        'tenant_users_user_id_fkey',
+        'tenant_users',
+        'users',
+        ['user_id'],
+        ['id'],
+        ondelete='CASCADE',
+    )
+    op.create_index(
+        op.f('ix_tenant_users_user_id'), 'tenant_users', ['user_id'], unique=False
+    )
+    op.execute(
+        """
+        DO $$
+        BEGIN
+            IF NOT EXISTS (SELECT 1 FROM tenant_users WHERE user_id IS NULL) THEN
+                ALTER TABLE tenant_users ALTER COLUMN user_id SET NOT NULL;
+            END IF;
+        END $$;
+        """
+    )
+
+    # The map has been consumed by permissions2fast and this chain: drop it.
+    op.execute("DROP TABLE IF EXISTS _uuid_migration_user_map")
 
 
 def downgrade() -> None:

@@ -186,3 +186,11 @@ This package follows consistent naming conventions for models and database table
 ## License
 
 MIT © [Angel Daniel Sanchez Castillo](https://github.com/AngelDanielSanchezCastillo)
+
+## UUID migration coordination (0.10.1+)
+
+`tenant_users.user_id` is backfilled from the `_uuid_migration_user_map` table
+left by `oauth2fast-fastapi >= 0.8.2` (requires
+`permissions2fast-fastapi >= 0.12.2`). This chain is the last AUTH-lane
+consumer and drops the map. Upgrade the lane in order: oauth -> permissions ->
+tenant2fast-auth.

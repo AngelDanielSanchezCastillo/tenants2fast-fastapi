@@ -187,6 +187,13 @@ def test_auth_uuid_migration_parseable_and_links_to_baseline():
     assert uuid_rev.down_revision == AUTH_BASELINE
     assert uuid_rev.path.endswith(f"{AUTH_UUID_MIGRATION}_uuid_soft_delete.py"), uuid_rev.path
 
+    with open(uuid_rev.path) as fh:
+        text = fh.read()
+    # Consume the cross-chain user map and drop it after the last consumer.
+    assert "_uuid_migration_user_map" in text
+    assert "UPDATE tenant_users" in text
+    assert "DROP TABLE IF EXISTS _uuid_migration_user_map" in text
+
     # Head is the uuid migration
     head = script.get_current_head()
     assert head == AUTH_UUID_MIGRATION
