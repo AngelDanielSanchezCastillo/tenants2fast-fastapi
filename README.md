@@ -194,3 +194,10 @@ left by `oauth2fast-fastapi >= 0.8.2` (requires
 `permissions2fast-fastapi >= 0.12.2`). This chain is the last AUTH-lane
 consumer and drops the map. Upgrade the lane in order: oauth -> permissions ->
 tenant2fast-auth.
+
+## Deletion policy (0.10.2+)
+
+Physical deletes never cascade. `tenant_users.user_id` and
+`tenant_users.tenant_id` are recreated without `ON DELETE CASCADE`; a delete
+that violates a dependency fails and must be resolved in the business layer
+(soft-delete preferred).

@@ -48,6 +48,7 @@ RBAC_SCRIPT_LOCATION = "tenant2fast_fastapi:migrations/tenant2fast-rbac"
 
 AUTH_BASELINE = "0001"
 AUTH_UUID_MIGRATION = "7f8a9b2c3d4e"
+AUTH_CASCADE_MIGRATION = "8a9b0c1d2e3f"
 RBAC_BASELINE = "0001"
 RBAC_UUID_MIGRATION = "a1b2c3d4e5f6"
 
@@ -191,9 +192,28 @@ def test_auth_uuid_migration_parseable_and_links_to_baseline():
     assert "UPDATE tenant_users" in text
     assert "DROP TABLE IF EXISTS _uuid_migration_user_map" in text
 
-    # Head is the uuid migration
-    head = script.get_current_head()
-    assert head == AUTH_UUID_MIGRATION
+
+def test_auth_drop_cascade_migration_removes_cascade():
+    cfg = Config()
+    cfg.set_main_option("script_location", AUTH_SCRIPT_LOCATION)
+    script = ScriptDirectory.from_config(cfg)
+
+    rev = script.get_revision(AUTH_CASCADE_MIGRATION)
+    assert rev is not None
+    assert rev.down_revision == AUTH_UUID_MIGRATION
+    assert rev.path.endswith(
+        f"{AUTH_CASCADE_MIGRATION}_drop_cascade_tenant_users.py"
+    ), rev.path
+
+    with open(rev.path) as fh:
+        text = fh.read()
+    assert "drop_constraint" in text
+    assert "tenant_users_user_id_fkey" in text
+    assert "tenant_users_tenant_id_fkey" in text
+    assert "ondelete=" not in text
+
+    # Head is the cascade-removal migration
+    assert script.get_current_head() == AUTH_CASCADE_MIGRATION
 
 
 def test_rbac_baseline_parseable_and_owns_all_tenant_tables():

@@ -158,6 +158,16 @@ async def _assert_preserved() -> None:
                 )
             ).scalar_one()
             assert map_table is None
+
+            cascade_count = (
+                await conn.execute(
+                    text(
+                        "SELECT count(*) FROM pg_constraint "
+                        "WHERE contype = 'f' AND confdeltype = 'c'"
+                    )
+                )
+            ).scalar_one()
+            assert cascade_count == 0
     finally:
         await engine.dispose()
 

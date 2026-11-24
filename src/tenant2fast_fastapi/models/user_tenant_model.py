@@ -13,5 +13,5 @@ class TenantUser(AuthSoftDeleteModel, table=True):
 
     __tablename__ = "tenant_users"
 
-    user_id: UUID = Field(index=True, foreign_key="users.id", ondelete="CASCADE")
-    tenant_id: UUID = Field(index=True, foreign_key="tenants.id", ondelete="CASCADE")
+    user_id: UUID = Field(index=True, foreign_key="users.id")
+    tenant_id: UUID = Field(index=True, foreign_key="tenants.id")

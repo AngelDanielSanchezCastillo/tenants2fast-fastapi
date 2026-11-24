@@ -86,7 +86,6 @@ def upgrade() -> None:
         'users',
         ['user_id'],
         ['id'],
-        ondelete='CASCADE',
     )
     op.create_index(
         op.f('ix_tenant_users_user_id'), 'tenant_users', ['user_id'], unique=False
