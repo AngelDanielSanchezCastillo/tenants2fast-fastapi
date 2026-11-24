@@ -26,6 +26,11 @@ resource strings.
 from oauth2fast_fastapi.models.bases import metadata
 from pgsqlasync2fast_fastapi import ChainSpec, register_chain
 
+# Register the permissions-global chain (and oauth, which it imports) BEFORE
+# appending tenant2fast-auth to the auth lane; otherwise import order can put
+# this chain ahead of its FK-proven predecessors.
+import permissions2fast_fastapi  # noqa: F401,E402  (registration side effect)
+
 from tenant2fast_fastapi.models import (  # noqa: F401  (registration side effect)
     Category,
     Permission,

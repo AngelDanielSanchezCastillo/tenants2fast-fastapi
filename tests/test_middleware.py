@@ -2,6 +2,8 @@
 test_middleware.py – integration tests for tenant resolution middleware.
 """
 
+from uuid import uuid4
+
 import pytest
 from httpx import AsyncClient, ASGITransport
 from tests.app_fixture import create_test_app
@@ -26,8 +28,8 @@ async def test_middleware_resolves_tenant_from_db(test_user, test_tenant, user_t
         
         assert response.status_code == 200
         data = response.json()
-        assert data["tenant_id"] == test_tenant.id
-        assert data["user_id"] == test_user.id
+        assert data["tenant_id"] == str(test_tenant.id)
+        assert data["user_id"] == str(test_user.id)
 
 
 @pytest.mark.asyncio
@@ -46,15 +48,15 @@ async def test_middleware_supports_x_tenant_header(test_user, test_tenant, user_
         }
         response = await ac.get("/test/context", headers=headers)
         assert response.status_code == 200
-        assert response.json()["tenant_id"] == test_tenant.id
+        assert response.json()["tenant_id"] == str(test_tenant.id)
 
         # Test with an invalid header (user doesn't have access to tenant 999)
-        headers["X-Tenant-Id"] = "999"
+        headers["X-Tenant-Id"] = str(uuid4())
         response = await ac.get("/test/context", headers=headers)
         # Should fallback to the first available tenant in UserTenant (which is test_tenant)
         # because the logic says links[0] if requested not found
         assert response.status_code == 200
-        assert response.json()["tenant_id"] == test_tenant.id
+        assert response.json()["tenant_id"] == str(test_tenant.id)
 
 
 @pytest.mark.asyncio
@@ -74,7 +76,7 @@ async def test_middleware_caches_in_redis(test_user, test_tenant, user_tenant_li
         
         # Verify cache
         cached_id = await get_user_tenant(test_user.id)
-        assert cached_id == test_tenant.id
+        assert cached_id == str(test_tenant.id)
 
 
 @pytest.mark.asyncio

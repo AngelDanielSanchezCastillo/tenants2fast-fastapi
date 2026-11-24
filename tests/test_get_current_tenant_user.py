@@ -27,8 +27,8 @@ async def test_get_current_tenant_user_returns_record(test_user, test_tenant, us
         response = await ac.get("/test/me", headers=headers)
         assert response.status_code == 200
         data = response.json()
-        assert data["id"] == t_user.id
-        assert data["auth_user_id"] == test_user.id
+        assert data["id"] == str(t_user.id)
+        assert data["auth_user_id"] == str(test_user.id)
         assert data["position"] == "Developer"
 
 
