@@ -51,6 +51,7 @@ AUTH_UUID_MIGRATION = "7f8a9b2c3d4e"
 AUTH_CASCADE_MIGRATION = "8a9b0c1d2e3f"
 RBAC_BASELINE = "0001"
 RBAC_UUID_MIGRATION = "a1b2c3d4e5f6"
+RBAC_AUDIT_MIGRATION = "b3c4d5e6f7a8"
 
 
 def _auth_spec():
@@ -255,9 +256,28 @@ def test_rbac_uuid_migration_parseable_and_links_to_baseline():
     assert "created_by" in text
     assert "updated_by" in text
 
-    # Head is the uuid migration
-    head = script.get_current_head()
-    assert head == RBAC_UUID_MIGRATION
+
+def test_rbac_audit_migration_converts_existing_integer_audit():
+    cfg = Config()
+    cfg.set_main_option("script_location", RBAC_SCRIPT_LOCATION)
+    script = ScriptDirectory.from_config(cfg)
+
+    rev = script.get_revision(RBAC_AUDIT_MIGRATION)
+    assert rev is not None
+    assert rev.down_revision == RBAC_UUID_MIGRATION
+    assert rev.path.endswith(
+        f"{RBAC_AUDIT_MIGRATION}_convert_rbac_audit_to_uuid.py"
+    ), rev.path
+
+    with open(rev.path) as fh:
+        text = fh.read()
+    assert "information_schema" in text
+    assert "gen_random_uuid" in text
+    assert "created_by" in text
+    assert "updated_by" in text
+
+    # Head is the audit-correction migration
+    assert script.get_current_head() == RBAC_AUDIT_MIGRATION
 
 
 def _offline_render(location: str, version_table: str, spec) -> None:
