@@ -70,6 +70,25 @@ _FK_RELATIONS = (
     ("permission_users", "permission_id", "permissions"),
 )
 
+#: Audit columns are plain nullable columns (not PK/FK, not unique).
+_AUDIT_COLUMNS = ("created_by", "updated_by")
+
+
+def _convert_audit_column(table_name: str, column_name: str) -> None:
+    """Convert a nullable, non-unique BigInt audit column to UUID.
+
+    Old integer values point to the auth database's user space and cannot be
+    mapped locally; they are dropped (NULL backfill). Offline-safe.
+    """
+    temp_name = f"{column_name}_uuid"
+    index_name = f"ix_{table_name}_{column_name}"
+
+    op.add_column(table_name, sa.Column(temp_name, sa.Uuid(), nullable=True))
+    op.drop_index(index_name, table_name=table_name, if_exists=True)
+    op.drop_column(table_name, column_name)
+    op.alter_column(table_name, temp_name, new_column_name=column_name)
+    op.create_index(index_name, table_name, [column_name], unique=False)
+
 
 def upgrade() -> None:
     """Upgrade schema: bigint → UUID + soft-delete (two-phase, FK-safe)."""
@@ -78,6 +97,11 @@ def upgrade() -> None:
         add_soft_delete_columns_alembic(op, table)
     for table in _IS_ACTIVE_TABLES:
         op.drop_column(table, 'is_active')
+
+    # --- Audit columns: BigInt -> UUID (nullable, non-unique) -------------
+    for table in _ALL_TABLES:
+        for column in _AUDIT_COLUMNS:
+            _convert_audit_column(table, column)
 
     # --- Phase 1: prepare PKs and FKs (old integer columns kept) ----------
     for table in _ALL_TABLES:

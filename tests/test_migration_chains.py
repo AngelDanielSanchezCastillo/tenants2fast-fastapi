@@ -230,6 +230,14 @@ def test_rbac_uuid_migration_parseable_and_links_to_baseline():
     assert uuid_rev.down_revision == RBAC_BASELINE
     assert uuid_rev.path.endswith(f"{RBAC_UUID_MIGRATION}_uuid_soft_delete.py"), uuid_rev.path
 
+    with open(uuid_rev.path) as fh:
+        text = fh.read()
+    # Audit columns must move to UUID too (created_by/updated_by are part of
+    # AuditTimestampMixin and the seeder writes UUIDs into them).
+    assert "_convert_audit_column" in text
+    assert "created_by" in text
+    assert "updated_by" in text
+
     # Head is the uuid migration
     head = script.get_current_head()
     assert head == RBAC_UUID_MIGRATION
