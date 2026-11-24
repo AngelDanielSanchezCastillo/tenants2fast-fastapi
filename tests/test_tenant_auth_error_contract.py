@@ -107,4 +107,4 @@ async def test_valid_token_with_tenant_returns_200(
         )
 
     assert response.status_code == 200
-    assert response.json()["tenant_id"] == test_tenant.id
+    assert response.json()["tenant_id"] == str(test_tenant.id)

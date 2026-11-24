@@ -124,19 +124,16 @@ def test_tenant_rbac_chain_registered_in_tenant_lane_with_contract():
     assert spec.owned_tables <= frozenset(spec.target_metadata.tables)
 
 
-def test_tenant_auth_chain_is_last_in_auth_lane():
+def test_tenant_auth_chain_runs_after_auth_predecessors():
     # FK-proven order (design D6): oauth -> permissions-global ->
-    # tenant2fast-auth. The tenant2fast auth chain may never run before its
-    # auth-lane predecessors, so it must sit at the end of the lane.
+    # tenant2fast-auth. Extra chains may be registered by consumers, so assert
+    # the dependency order instead of "last in the lane".
     chains = get_lane_chains("auth")
-    assert chains
-    auth_spec_idx = next(
-        i
-        for i, c in enumerate(chains)
-        if c.package == "tenant2fast_fastapi"
-    )
-    assert auth_spec_idx == len(chains) - 1
-    assert chains[auth_spec_idx].script_path == "migrations/tenant2fast-auth"
+    packages = [chain.package for chain in chains]
+    tenant_idx = packages.index("tenant2fast_fastapi")
+    assert tenant_idx > packages.index("oauth2fast_fastapi")
+    assert tenant_idx > packages.index("permissions2fast_fastapi")
+    assert chains[tenant_idx].script_path == "migrations/tenant2fast-auth"
 
 
 def test_tenant_auth_target_metadata_holds_owned_tables():

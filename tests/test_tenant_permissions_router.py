@@ -20,11 +20,13 @@ from __future__ import annotations
 
 import importlib
 from types import SimpleNamespace
+from uuid import uuid4
 
 import pytest
 from fastapi import FastAPI
 from httpx import ASGITransport, AsyncClient
 from sqlalchemy.ext.asyncio import create_async_engine
+from sqlmodel import select
 from sqlmodel.ext.asyncio.session import AsyncSession
 
 from tenant2fast_fastapi.utils.models_loader import import_tenant_models
@@ -53,7 +55,9 @@ def _session_factory(engine):
 
 async def _seed_permissions(engine, rows):
     async with AsyncSession(engine) as session:
-        return await _seed_table_idempotent(session, "permissions", rows, Permission)
+        await _seed_table_idempotent(session, "permissions", rows, Permission)
+        result = await session.exec(select(Permission))
+        return list(result.all())
 
 
 def _build_app(monkeypatch, engine) -> FastAPI:
@@ -88,11 +92,14 @@ async def _get_permissions(engine, monkeypatch):
 
 @pytest.mark.asyncio
 async def test_list_permissions_with_category_returns_200_and_category(monkeypatch):
-    """Permission seeded with category_id → 200 and int permission_category_id."""
+    """Permission seeded with a category UUID → 200 and UUID category id."""
     engine = await _tenant_engine()
-    await _seed_permissions(
-        engine, [{"id": 1, "name": "view_tenant_info", "category_id": 1}]
+    category_id = uuid4()
+    seeded = await _seed_permissions(
+        engine,
+        [{"name": "view_tenant_info", "permission_category_id": category_id}],
     )
+    perm = seeded[0]
 
     response = await _get_permissions(engine, monkeypatch)
 
@@ -100,20 +107,25 @@ async def test_list_permissions_with_category_returns_200_and_category(monkeypat
     body = response.json()
     assert body["count"] == 1
     assert body["permissions"] == [
-        {"id": 1, "name": "view_tenant_info", "permission_category_id": 1}
+        {
+            "id": str(perm.id),
+            "name": "view_tenant_info",
+            "permission_category_id": str(category_id),
+        }
     ]
     await engine.dispose()
 
 
 @pytest.mark.asyncio
 async def test_list_permissions_without_category_returns_200_and_null(monkeypatch):
-    """Permission without category_id → 200 with permission_category_id null."""
+    """Permission without category → 200 with permission_category_id null."""
     engine = await _tenant_engine()
+    category_id = uuid4()
     await _seed_permissions(
         engine,
         [
-            {"id": 1, "name": "view_tenant_info", "category_id": 1},
-            {"id": 2, "name": "edit_tenant_info"},
+            {"name": "view_tenant_info", "permission_category_id": category_id},
+            {"name": "edit_tenant_info"},
         ],
     )
 
@@ -122,9 +134,9 @@ async def test_list_permissions_without_category_returns_200_and_null(monkeypatc
     assert response.status_code == 200
     body = response.json()
     assert body["count"] == 2
-    by_id = {p["id"]: p for p in body["permissions"]}
-    assert by_id[1]["permission_category_id"] == 1
-    assert by_id[2]["permission_category_id"] is None
+    by_name = {p["name"]: p for p in body["permissions"]}
+    assert by_name["view_tenant_info"]["permission_category_id"] == str(category_id)
+    assert by_name["edit_tenant_info"]["permission_category_id"] is None
     await engine.dispose()
 
 
@@ -132,17 +144,18 @@ async def test_list_permissions_without_category_returns_200_and_null(monkeypatc
 async def test_get_single_permission_null_safe(monkeypatch):
     """GET /tenants/permissions/{id} with a category-less permission → 200 null."""
     engine = await _tenant_engine()
-    await _seed_permissions(engine, [{"id": 2, "name": "edit_tenant_info"}])
+    seeded = await _seed_permissions(engine, [{"name": "edit_tenant_info"}])
+    perm = seeded[0]
 
     app = _build_app(monkeypatch, engine)
     transport = ASGITransport(app=app)
     async with AsyncClient(transport=transport, base_url="http://test") as client:
-        response = await client.get("/tenants/permissions/2")
+        response = await client.get(f"/tenants/permissions/{perm.id}")
 
     assert response.status_code == 200
     body = response.json()
     assert body["permission"] == {
-        "id": 2,
+        "id": str(perm.id),
         "name": "edit_tenant_info",
         "permission_category_id": None,
     }
