@@ -121,7 +121,11 @@ async def seed(profile: str, tenant_id: UUID) -> Dict[str, Any]:
     }
 
     try:
-        orchestrator = TenantSeederOrchestrator(profile=profile)
+        # Pin to this package's own config: app contributions are seeded by the
+        # app through the registry, not implicitly from this internal call.
+        orchestrator = TenantSeederOrchestrator(
+            profile=profile, config=get_seeder_config()
+        )
         seeding = await orchestrator.seed_tenant(tenant_id)
         result["tables_seeded"] = seeding.tables_seeded
         result["rows_seeded"] = seeding.rows_inserted + seeding.rows_updated

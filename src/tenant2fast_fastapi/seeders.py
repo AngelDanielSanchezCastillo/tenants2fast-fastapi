@@ -26,7 +26,7 @@ from uuid import UUID
 
 from sqlmodel import select
 from sqlmodel.ext.asyncio.session import AsyncSession
-from tools2fast_fastapi import active_only
+from tools2fast_fastapi import active_only as active_only_query
 
 from pgsqlasync2fast_fastapi import (
     SeederEngine,
@@ -357,7 +357,7 @@ class TenantSeederOrchestrator:
         async with AsyncSession(auth_engine) as session:
             stmt = select(Tenant)
             if active_only:
-                stmt = active_only(stmt)
+                stmt = active_only_query(stmt)
             tenants = list((await session.execute(stmt)).scalars().all())
 
         if tenant_filter is not None:
