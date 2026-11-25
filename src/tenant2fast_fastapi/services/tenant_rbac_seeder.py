@@ -51,31 +51,13 @@ logger = logging.getLogger(__name__)
 
 def get_seeder_config():
     """
-    Return the SeederConfig for this package.
+    Return the tenant seeder configuration.
 
-    Used by the seeder orchestrator (pgsqlasync2fast-fastapi) to:
-    - Detect table conflicts between packages
-    - Determine execution order (priority)
-    - Locate the manifest.json for table discovery
-    - Identify as a tenant seeder (is_tenant_seeder=True)
-
-    Returns:
-        SeederConfig with is_tenant_seeder=True
+    Delegates to the new ODD-5 seeder module (manifest v2.0 + model registry).
     """
-    from pgsqlasync2fast_fastapi import SeederConfig
+    from ..seeders import get_seeder_config as _get_seeder_config
 
-    # Path relative to package root: seeders/manifest.json
-    # __file__ is tenant2fast_fastapi/services/tenant_rbac_seeder.py, go up 2 levels
-    current_dir = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
-    manifest_path = os.path.join(current_dir, "seeders", "manifest.json")
-
-    return SeederConfig(
-        connection_name="auth",  # Tenant seeders use auth for tenant enumeration
-        manifest_path=manifest_path,
-        is_tenant_seeder=True,
-        priority=70,
-        package_name="tenants2fast-fastapi"
-    )
+    return _get_seeder_config()
 
 
 # ============================================================================
@@ -119,72 +101,32 @@ async def seed(profile: str, tenant_id: UUID) -> Dict[str, Any]:
     """
     Seed tenant RBAC data for a specific tenant.
 
-    This function is idempotent - running it multiple times with the same
-    data produces the same result (no duplicates).
+    Delegates to the ODD-5 ``TenantSeederOrchestrator`` (manifest v2.0 with
+    explicit uuid7 literals and natural-key idempotency).
 
     Args:
-        profile: Profile folder name (e.g., "dev", "prod")
-        tenant_id: The tenant ID (UUID) to seed
+        profile: Profile name (dev/prod).
+        tenant_id: The tenant ID (UUID) to seed.
 
     Returns:
         Dictionary with seeding results: {tables_seeded, rows_seeded, errors}
     """
-    result = {
+    from ..seeders import TenantSeederOrchestrator
+
+    result: Dict[str, Any] = {
         "tenant_id": str(tenant_id),
         "tables_seeded": 0,
         "rows_seeded": 0,
-        "errors": []
+        "errors": [],
     }
 
-    config = get_seeder_config()
-
     try:
-        # Get tenant-specific session
-        session = await get_tenant_session(tenant_id)
-
-        async with session:
-            # Load manifest
-            manifest = _load_manifest(config.manifest_path)
-
-            # Get load order
-            table_order = manifest.get("load_order", ["categories", "roles", "permissions"])
-
-            # Track loaded tables for FK validation
-            loaded_tables: Dict[str, list[Dict[str, Any]]] = {}
-
-            # First pass: load all data
-            for table_name in table_order:
-                rows = _load_table_data(table_name, config.manifest_path, profile)
-                if not rows:
-                    logger.debug(f"No data for table '{table_name}' in profile '{profile}'")
-                    continue
-                loaded_tables[table_name] = rows
-
-            # Second pass: seed each table
-            for table_name in table_order:
-                rows = loaded_tables.get(table_name, [])
-                if not rows:
-                    continue
-
-                # Resolve FK string references (category_name → UUID)
-                rows = await _resolve_fk_references(session, table_name, rows)
-
-                model_class = _get_model_class(table_name)
-                if model_class is None:
-                    logger.warning(f"No model class for table '{table_name}', skipping")
-                    continue
-
-                # Seed idempotently (lookup by natural key "name")
-                inserted, skipped = await _seed_table_idempotent(
-                    session, table_name, rows, model_class
-                )
-                result["rows_seeded"] += inserted
-                result["tables_seeded"] += 1
-                logger.info(f"Seeded table '{table_name}' for tenant {tenant_id}: {inserted} inserted, {skipped} skipped")
-
-        logger.info(f"✅ Seeding completed for tenant {tenant_id}")
-
-    except Exception as e:
+        orchestrator = TenantSeederOrchestrator(profile=profile)
+        seeding = await orchestrator.seed_tenant(tenant_id)
+        result["tables_seeded"] = seeding.tables_seeded
+        result["rows_seeded"] = seeding.rows_inserted + seeding.rows_updated
+        result["errors"] = list(seeding.errors)
+    except Exception as e:  # noqa: BLE001 - reported in the result
         error_msg = f"Seeding failed for tenant {tenant_id}: {e}"
         logger.error(error_msg)
         result["errors"].append(error_msg)

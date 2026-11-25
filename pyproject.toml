@@ -73,8 +73,7 @@ include = ["tenant2fast_fastapi*"]
 [tool.setuptools.package-data]
 tenant2fast_fastapi = [
     "seeders/manifest.json",
-    "seeders/dev/*.json",
-    "seeders/prod/*.json",
+    "seeders/boot/*.json",
     "skills/*.md",
     # Package-owned Alembic chains (alembic-2fast): shipped in the wheel and
     # resolved from the installed release, never a checkout.
@@ -99,3 +98,8 @@ python_version = "3.14"
 warn_return_any = true
 warn_unused_configs = true
 disallow_untyped_defs = false
+
+# TEMPORARY (ODD-5 local development): use the local pgsqlasync2fast checkout
+# until 0.7.0 is published. Revert to the pinned PyPI version before release.
+[tool.uv.sources]
+pgsqlasync2fast-fastapi = { path = "../pgsqlasync2fast-fastapi", editable = true }

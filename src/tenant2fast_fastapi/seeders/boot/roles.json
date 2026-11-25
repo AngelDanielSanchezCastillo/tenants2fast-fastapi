@@ -1,13 +1,16 @@
 [
   {
+    "id": "01a21477-e767-7280-a9bd-bc634ba396d0",
     "name": "Owner",
     "description": "Full control over the tenant resources and users"
   },
   {
+    "id": "01a21477-e767-7280-a9bd-bc64c86613c4",
     "name": "Admin",
     "description": "Administrative access to most tenant resources"
   },
   {
+    "id": "01a21477-e767-7280-a9bd-bc65e07f2032",
     "name": "Member",
     "description": "Standard access to tenant resources"
   }

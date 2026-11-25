@@ -1,21 +1,55 @@
 {
-  "fk_fields": {
-    "categories": "category_id",
-    "roles": "role_id",
-    "permissions": "permission_id"
-  },
-  "profile_folders": ["dev", "prod"],
-  "tables": {
-    "categories": {
-      "file": "categories.json"
+  "version": "2.0",
+  "strict": true,
+  "on_failure": "rollback_all",
+  "boot": {
+    "dev": {
+      "tables": {
+        "categories": {
+          "file": "boot/categories.json",
+          "mode": "upsert",
+          "natural_key": ["name"]
+        },
+        "roles": {
+          "file": "boot/roles.json",
+          "mode": "upsert",
+          "natural_key": ["name"]
+        },
+        "permissions": {
+          "file": "boot/permissions.json",
+          "mode": "upsert",
+          "natural_key": ["name"]
+        }
+      },
+      "dependencies": {
+        "categories": [],
+        "roles": [],
+        "permissions": ["categories"]
+      }
     },
-    "roles": {
-      "file": "roles.json"
-    },
-    "permissions": {
-      "file": "permissions.json",
-      "depends_on": ["categories"]
+    "prod": {
+      "tables": {
+        "categories": {
+          "file": "boot/categories.json",
+          "mode": "upsert",
+          "natural_key": ["name"]
+        },
+        "roles": {
+          "file": "boot/roles.json",
+          "mode": "upsert",
+          "natural_key": ["name"]
+        },
+        "permissions": {
+          "file": "boot/permissions.json",
+          "mode": "upsert",
+          "natural_key": ["name"]
+        }
+      },
+      "dependencies": {
+        "categories": [],
+        "roles": [],
+        "permissions": ["categories"]
+      }
     }
-  },
-  "load_order": ["categories", "roles", "permissions"]
+  }
 }
