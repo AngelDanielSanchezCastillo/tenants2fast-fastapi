@@ -35,6 +35,7 @@ from .models.tenant_model import Tenant, TenantRead
 
 # TENANT route+link seeding (RBAC standardization D2)
 from .services.route_seeder import RouteSpec, seed_tenant_routes
+from .services.route_manifest import load_route_manifest, validate_route_manifest
 
 # Tenant seeders do NOT use register_seeder() because:
 # 1. They don't seed the auth connection directly
@@ -111,4 +112,6 @@ __all__ = [
     # TENANT route+link seeding (RBAC standardization D2)
     "RouteSpec",
     "seed_tenant_routes",
+    "load_route_manifest",
+    "validate_route_manifest",
 ]

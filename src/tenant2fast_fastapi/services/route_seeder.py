@@ -22,7 +22,7 @@ from __future__ import annotations
 
 from dataclasses import dataclass, field
 
-from pgsqlasync2fast_fastapi.seeder import insert_if_missing
+from pgsqlasync2fast_fastapi.seeders import insert_if_missing
 
 from tenant2fast_fastapi.models.assignments_model import PermissionRole, PermissionRoute
 from tenant2fast_fastapi.models.permission_model import Permission

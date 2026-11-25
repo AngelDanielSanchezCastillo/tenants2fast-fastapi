@@ -27,14 +27,14 @@ dependencies = [
     # Pulls in pgsqlasync2fast-fastapi, mailing2fast-fastapi,
     # log2fast-fastapi, sqlmodel, fastapi, pydantic, etc. transitively.
     # 0.12.0+ ships UUID v7 + soft-delete on all permission tables.
-    "permissions2fast-fastapi>=0.12.2",
+    "permissions2fast-fastapi>=0.14.0",
     # Direct imports of User/token utilities and AuthError.
     # 0.8.0+ ships UUID v7 + soft-delete on users and refresh_tokens.
     "oauth2fast-fastapi>=0.8.2",
     # 0.4.0+ ships UUIDIdMixin, SoftDeleteMixin, and soft-delete helpers.
     "tools2fast-fastapi>=0.4.0",
     # 0.6.2+ ships the correct two-phase Alembic UUID helpers.
-    "pgsqlasync2fast-fastapi>=0.8.0",
+    "pgsqlasync2fast-fastapi>=0.9.0",
     # Alembic ships the shared migration runner/env/registry.
     "alembic>=1.20.0",
 ]

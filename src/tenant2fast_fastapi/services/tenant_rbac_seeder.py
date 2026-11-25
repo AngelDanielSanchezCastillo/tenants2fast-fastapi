@@ -218,8 +218,8 @@ async def seed_all_tenants(profile: str) -> Dict[str, Any]:
 
 async def reseed_all_rbac(
     profile: str,
-    global_manifest: list,
-    tenant_manifest: list,
+    global_manifest: Any,
+    tenant_manifest: Any,
     *,
     active_only: bool = True,
 ) -> dict[str, Any]:
@@ -262,6 +262,17 @@ async def reseed_all_rbac(
         "global_routes": 0,
         "tenant_routes": 0,
     }
+
+    # Accept JSON manifest paths (preferred) or pre-built RouteSpec lists.
+    if isinstance(global_manifest, (str, Path)):
+        from permissions2fast_fastapi import load_route_manifest as load_global
+
+        global_manifest = load_global(global_manifest)
+    if isinstance(tenant_manifest, (str, Path)):
+        from .route_manifest import load_route_manifest as load_tenant
+
+        tenant_manifest = load_tenant(tenant_manifest)
+
 
     try:
         # Session de auth (misma vía que seed_all_tenants: manager "auth").
