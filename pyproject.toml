@@ -34,7 +34,7 @@ dependencies = [
     # 0.4.0+ ships UUIDIdMixin, SoftDeleteMixin, and soft-delete helpers.
     "tools2fast-fastapi>=0.4.0",
     # 0.6.2+ ships the correct two-phase Alembic UUID helpers.
-    "pgsqlasync2fast-fastapi>=0.6.2",
+    "pgsqlasync2fast-fastapi>=0.7.0",
     # Alembic ships the shared migration runner/env/registry.
     "alembic>=1.20.0",
 ]
@@ -99,7 +99,3 @@ warn_return_any = true
 warn_unused_configs = true
 disallow_untyped_defs = false
 
-# TEMPORARY (ODD-5 local development): use the local pgsqlasync2fast checkout
-# until 0.7.0 is published. Revert to the pinned PyPI version before release.
-[tool.uv.sources]
-pgsqlasync2fast-fastapi = { path = "../pgsqlasync2fast-fastapi", editable = true }
