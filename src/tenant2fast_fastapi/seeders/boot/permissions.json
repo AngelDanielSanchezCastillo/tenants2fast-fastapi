@@ -1,0 +1,38 @@
+[
+  {
+    "id": "01a21477-e767-7280-a9bd-bc66464615a4",
+    "name": "view_tenant_info",
+    "description": "View tenant metadata",
+    "permission_category_id": "01a21477-e767-7280-a9bd-bc615811ebd3"
+  },
+  {
+    "id": "01a21477-e767-7280-a9bd-bc671ec98ba5",
+    "name": "edit_tenant_info",
+    "description": "Modify tenant metadata",
+    "permission_category_id": "01a21477-e767-7280-a9bd-bc615811ebd3"
+  },
+  {
+    "id": "01a21477-e767-7280-a9bd-bc68b46190a4",
+    "name": "list_users",
+    "description": "List all users in the tenant",
+    "permission_category_id": "01a21477-e767-7280-a9bd-bc62b4ab5cab"
+  },
+  {
+    "id": "01a21477-e767-7280-a9bd-bc699893e124",
+    "name": "add_users",
+    "description": "Add new users to the tenant",
+    "permission_category_id": "01a21477-e767-7280-a9bd-bc62b4ab5cab"
+  },
+  {
+    "id": "01a21477-e767-7280-a9bd-bc6a2fccfdde",
+    "name": "remove_users",
+    "description": "Remove users from the tenant",
+    "permission_category_id": "01a21477-e767-7280-a9bd-bc62b4ab5cab"
+  },
+  {
+    "id": "01a21477-e767-7280-a9bd-bc6b2aa173b8",
+    "name": "manage_roles",
+    "description": "Assign or remove roles from users",
+    "permission_category_id": "01a21477-e767-7280-a9bd-bc62b4ab5cab"
+  }
+]

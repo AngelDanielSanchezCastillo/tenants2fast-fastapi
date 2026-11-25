@@ -50,6 +50,15 @@ from .services.tenant_rbac_seeder import (
     seed_tenant_rbac,
 )
 
+# ODD-5 tenant seeder orchestration (manifest v2.0 + SeederEngine)
+from .seeders import (
+    TenantFilter,
+    TenantSeederConfig,
+    TenantSeederOrchestrator,
+    adopt_explicit_seed_ids,
+    adopt_explicit_seed_ids_for_tenant,
+)
+
 __all__ = [
     "__version__",
     "Tenant",
@@ -79,6 +88,12 @@ __all__ = [
     "seed_all_tenants",
     "seed_tenant_rbac",
     "reseed_all_rbac",
+    # ODD-5 tenant seeder orchestration
+    "TenantSeederConfig",
+    "TenantSeederOrchestrator",
+    "TenantFilter",
+    "adopt_explicit_seed_ids",
+    "adopt_explicit_seed_ids_for_tenant",
     # TENANT route+link seeding (RBAC standardization D2)
     "RouteSpec",
     "seed_tenant_routes",
