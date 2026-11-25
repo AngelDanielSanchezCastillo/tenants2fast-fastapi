@@ -115,7 +115,7 @@ async def _seed_tenant_route(session, spec: RouteSpec) -> int:
             session,
             Permission,
             lookup={"name": spec.permission},
-            defaults={"is_active": True},
+            defaults={},
         )
         await insert_if_missing(
             session,
@@ -129,7 +129,7 @@ async def _seed_tenant_route(session, spec: RouteSpec) -> int:
             session,
             Role,
             lookup={"name": role_name},
-            defaults={"is_active": True},
+            defaults={},
         )
         if permission is not None:
             await insert_if_missing(
