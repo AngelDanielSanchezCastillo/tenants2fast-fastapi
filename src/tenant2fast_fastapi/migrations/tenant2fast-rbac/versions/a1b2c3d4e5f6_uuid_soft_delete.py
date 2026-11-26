@@ -28,6 +28,7 @@ import sqlalchemy as sa
 from pgsqlasync2fast_fastapi.migration_helpers import (
     add_soft_delete_columns_alembic,
     convert_unique_column_to_uuid_alembic,
+    dedupe_unique_columns_alembic,
     finalize_uuid_alembic,
     prepare_fk_uuid_alembic,
     prepare_pk_uuid_alembic,
@@ -90,8 +91,52 @@ def _convert_audit_column(table_name: str, column_name: str) -> None:
     op.create_index(index_name, table_name, [column_name], unique=False)
 
 
+def _dedupe_unique_catalogs() -> None:
+    """Collapse drifted duplicates in the tenant RBAC unique-name catalogs.
+
+    Duplicate keys behind a valid-looking unique index make the later non-HOT
+    ``UPDATE`` (PK swap) abort when PostgreSQL re-validates the index. The
+    dependents below are plain FKs, so repointing is unambiguous.
+
+    ``users.auth_user_id`` is intentionally not repaired: it is the external
+    identity link; a duplicate there needs a human decision, not a silent merge.
+    """
+    dedupe_unique_columns_alembic(
+        op,
+        "categories",
+        ("name",),
+        index_name="ix_categories_name",
+        dependents=[("permissions", "permission_category_id", ())],
+    )
+    dedupe_unique_columns_alembic(
+        op,
+        "roles",
+        ("name",),
+        index_name="ix_roles_name",
+        dependents=[
+            ("role_users", "role_id", ("user_id",)),
+            ("permission_roles", "role_id", ("permission_id",)),
+        ],
+    )
+    dedupe_unique_columns_alembic(
+        op,
+        "permissions",
+        ("name",),
+        index_name="ix_permissions_name",
+        dependents=[
+            ("permission_roles", "permission_id", ("role_id",)),
+            ("permission_routes", "permission_id", ("route_id",)),
+            ("permission_users", "permission_id", ("user_id",)),
+        ],
+    )
+
+
 def upgrade() -> None:
     """Upgrade schema: bigint → UUID + soft-delete (two-phase, FK-safe)."""
+    # Duplicate catalog keys make the PK conversion abort on the unique-index
+    # re-validation; collapse them first.
+    _dedupe_unique_catalogs()
+
     # --- Soft-delete columns + drop is_active -----------------------------
     for table in _ALL_TABLES:
         add_soft_delete_columns_alembic(op, table)
