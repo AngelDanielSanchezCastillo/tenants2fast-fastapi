@@ -45,7 +45,10 @@ def upgrade() -> None:
     sa.Column('user_id', sa.BigInteger(), nullable=True),
     sa.Column('tenant_id', sa.BigInteger(), nullable=True),
     sa.ForeignKeyConstraint(['tenant_id'], ['tenants.id'], ondelete='CASCADE'),
-    sa.ForeignKeyConstraint(['user_id'], ['users.id'], ondelete='CASCADE'),
+    # NOTE: user_id FK to users.id is NOT created here because users belongs to
+    # oauth2fast chain which may have already converted users.id to UUID by the
+    # time this migration runs. The FK is added later in a1b2c3d4e5f6 after
+    # user_id is converted to UUID. This allows both fresh and existing DBs.
     sa.PrimaryKeyConstraint('id')
     )
     op.create_index(op.f('ix_tenant_users_id'), 'tenant_users', ['id'], unique=False)
