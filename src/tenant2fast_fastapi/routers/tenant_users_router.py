@@ -69,7 +69,9 @@ async def add_user(
 ) -> UserCreatedResponse:
     """Add a user to the current tenant."""
     async with await get_tenant_session(tenant.id) as session:
-        user = await tenant_user_service.add_user_to_tenant(user_data, session)
+        user = await tenant_user_service.add_user_to_tenant(
+            tenant.id, user_data, session
+        )
         return UserCreatedResponse(user=_user_response(user))
 
 
