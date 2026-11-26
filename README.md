@@ -146,6 +146,84 @@ uv build
 
 ---
 
+## Seeders
+
+Tenant DB seeding is orchestrated by `TenantSeederOrchestrator`, which wraps
+`pgsqlasync2fast`'s `SeederEngine` and supports composition across packages.
+
+### Base data
+
+```
+tenant2fast_fastapi/seeders/
+  manifest.json          # v2.0, explicit uuid7 literals, natural_key by name
+  boot/categories.json
+  boot/roles.json
+  boot/permissions.json
+```
+
+```python
+from tenant2fast_fastapi import TenantSeederOrchestrator, TenantFilter
+
+orchestrator = TenantSeederOrchestrator(profile="dev")
+await orchestrator.seed_tenant(tenant_id)          # one tenant
+await orchestrator.seed_new_tenant(tenant_id)      # runtime-created tenant
+await orchestrator.seed_all_tenants(               # filtered batch
+    tenant_filter=TenantFilter(include=[tenant_id]),
+)
+```
+
+### Composition: app additions, overrides, opt-out
+
+Packages and apps register tenant contributions; rows merge additively by
+natural key:
+
+```python
+from tenant2fast_fastapi import (
+    TenantSeederConfig,
+    register_tenant_package_seeders,
+)
+
+register_tenant_package_seeders(TenantSeederConfig(
+    package_name="my-app",
+    manifest_path="my_app/seeders/manifest.json",
+    model_registry={"roles": Role, "permissions": Permission},
+    priority=90,
+    merge_tables=["roles", "permissions"],   # add rows, keep the base
+    # overrides=["roles"],                   # or take the table over
+    # disabled=True,                         # or skip entirely
+))
+```
+
+The orchestrator runs every effective contribution per tenant in priority
+order. Conflicts without `merge_tables`/`overrides` raise at registration.
+
+### Route manifests (JSON)
+
+```python
+from tenant2fast_fastapi import load_route_manifest, validate_route_manifest
+
+assert validate_route_manifest("app/routes/tenant.json") == []
+specs = load_route_manifest("app/routes/tenant.json")
+```
+
+`reseed_all_rbac(profile, global_manifest, tenant_manifest)` accepts JSON paths
+or pre-built `RouteSpec` lists; it seeds routes, `permission_routes` and
+`permission_roles` per tenant idempotently.
+
+### Id adoption
+
+`TenantSeederOrchestrator` adopts explicit ids before seeding each
+contribution:
+
+```python
+from tenant2fast_fastapi import adopt_explicit_seed_ids_for_tenant
+
+await adopt_explicit_seed_ids_for_tenant(tenant_id, profile="dev")
+```
+
+The tenant2fast-rbac migration chain rebuilds RBAC FKs with
+`ON UPDATE CASCADE` so ids update in place.
+
 ## Related Packages
 
 | Package | PyPI | Purpose |
